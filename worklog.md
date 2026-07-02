@@ -422,3 +422,81 @@ Added 3 new Prisma models:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 6 — Web Dev Review Round (Cron Trigger 2026-07-02 13:58)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 17 nav views navigate correctly (added Tax Advisor)
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+
+### New Features Added (Phase 6 — 2 major features)
+
+**1. Tax Saving Advisor** (new view + API)
+- Indian tax context: Section 80C (₹1.5L), 80D (₹25K), 80CCD(1B) NPS (₹50K), 80E (education loan)
+- Hero card: total potential additional tax savings + estimated tax already saved
+- Section utilization stacked bar chart (Used vs Remaining per section)
+- 4 section breakdown cards with progress bars, "Maxed" badges, instrument breakdowns
+- AI recommendations with priority badges (high/medium) and potential tax saved per action
+- Auto-detects current financial year (April-March) and analyzes FY-relevant investments/expenses
+- Tax bracket: 31.2% (30% + 4% cess)
+- API: `GET /api/ai/tax-suggestions`
+- Sample: FY 2026-27, ₹2.14L potential savings, 2 recommendations (80C ₹46.8K + NPS ₹15.6K)
+
+**2. Goals Timeline Projection** (API + section on Goals view)
+- Predicts when each goal will be reached based on 3-month avg savings rate
+- Per-goal monthly contribution estimate (avg savings ÷ goal count)
+- Status badges: On Track / Behind / At Risk / Completed
+  - Behind: projected months > deadline months
+  - At Risk: projected > 80% of deadline
+  - On Track: within deadline
+  - Completed: progress ≥ 100%
+- Shows months-to-complete + projected completion date
+- Summary text with stats (X on track, Y behind)
+- API: `GET /api/goals/projection`
+- Sample: ₹22.4K avg savings, 3 goals (1 on-track, 2 behind)
+
+### Styling Improvements (Phase 6)
+- Tax hero card uses gradient-emerald with blur accents (consistent with Net Worth hero)
+- Section breakdown cards use per-section colors (emerald/cyan/violet/amber)
+- AI recommendations use violet theme (consistent with investment insights)
+- Goals projection section uses emerald gradient theme with status-colored borders
+- Status badges color-coded (emerald=on-track, rose=behind, amber=at-risk)
+
+### New API Routes (2 added in Phase 6)
+- `GET /api/ai/tax-suggestions` — Tax saving analysis with section breakdowns + recommendations
+- `GET /api/goals/projection` — Goal completion timeline projections
+
+### New Components (1 added)
+- `src/components/tax/tax-view.tsx` — Tax Saving Advisor view
+- (Goals projection integrated into existing goal-view.tsx)
+
+### Verification Results (Phase 6)
+- ✅ Tax API: FY 2026-27, ₹2.14L potential, 2 recommendations (80C + NPS)
+- ✅ Goals Projection: ₹22.4K avg savings, 3 goals with status (1 on-track, 2 behind)
+- ✅ All 17 views navigate without errors
+- ✅ VLM confirmed Tax Advisor and Goals projection all render correctly
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1. ~~**PDF reports**~~ ✅ DONE (Phase 3)
+2. ~~**Investment tracking**~~ ✅ DONE (Phase 4)
+3. ~~**Net worth tracker**~~ ✅ DONE (Phase 5)
+4. ~~**AI investment insights**~~ ✅ DONE (Phase 5)
+5. ~~**Tax saving suggestions**~~ ✅ DONE (Phase 6)
+6. ~~**Goals timeline projection**~~ ✅ DONE (Phase 6)
+7. **More ML models**: Add Random Forest approximation for category predictions
+8. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+9. **PWA / offline**: Service worker for offline transaction viewing
+10. **Email notifications**: Send budget-exceeded / goal-completion emails
+11. **Multi-user sharing**: Shared household budgets with role-based access
+12. **Bill auto-payment simulation**: Auto-deduct bills on due date
+13. **Dashboard spending velocity widget**: Daily avg spend rate this month
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)

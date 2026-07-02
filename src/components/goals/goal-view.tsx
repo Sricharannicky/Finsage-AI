@@ -20,6 +20,19 @@ import { SAVINGS_GOAL_CATEGORIES, formatCurrency, formatDate } from "@/lib/const
 import { toast } from "sonner";
 import type { SavingsGoal } from "@/lib/types";
 
+interface Projection {
+  id: string; title: string; targetAmount: number; currentAmount: number; remaining: number;
+  progress: number; monthlyContribution: number; monthsToComplete: number | null;
+  projectedDate: string | null; deadline: string | null; priority: string;
+  status: "on-track" | "behind" | "at-risk" | "completed";
+}
+interface ProjectionData {
+  projections: Projection[];
+  summary: string;
+  avgMonthlySavings: number;
+  perGoalMonthly: number;
+}
+
 export function GoalView() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +41,7 @@ export function GoalView() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [contributeId, setContributeId] = useState<string | null>(null);
   const [contributeAmount, setContributeAmount] = useState("");
+  const [projection, setProjection] = useState<ProjectionData | null>(null);
 
   // form
   const [title, setTitle] = useState("");
@@ -46,6 +60,10 @@ export function GoalView() {
     try {
       const res = await api.get<{ goals: SavingsGoal[] }>("/api/goals");
       setGoals(res.goals);
+      // Load projection lazily
+      api.get<ProjectionData>("/api/goals/projection")
+        .then(setProjection)
+        .catch(() => setProjection(null));
     } catch (err: any) {
       toast.error(err.message || "Failed to load goals");
     } finally {
@@ -169,6 +187,47 @@ export function GoalView() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Timeline Projection */}
+      {projection && projection.projections.length > 0 && (
+        <Card className="shadow-sm border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="size-6 rounded-lg gradient-emerald flex items-center justify-center">
+                <TrendingUp className="size-3.5 text-white" />
+              </div>
+              Timeline Projection
+            </CardTitle>
+            <CardDescription className="text-xs">{projection.summary}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {projection.projections.map((p, i) => {
+              const statusConfig = {
+                "on-track": { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", icon: "✅", label: "On Track" },
+                "behind": { color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20", icon: "⚠️", label: "Behind" },
+                "at-risk": { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20", icon: "⚡", label: "At Risk" },
+                "completed": { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20", icon: "🏆", label: "Completed" },
+              }[p.status];
+              return (
+                <motion.div key={p.id} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                  className={`flex items-center gap-3 p-2.5 rounded-lg border ${statusConfig.border} ${statusConfig.bg}`}>
+                  <span className="text-base flex-shrink-0">{statusConfig.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{p.title}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {p.status === "completed" ? "Goal reached!" :
+                       p.monthsToComplete ? `${p.monthsToComplete} months to complete (${formatCurrency(p.monthlyContribution)}/mo)` : "No savings rate yet"}
+                      {p.projectedDate && p.status !== "completed" && ` · by ${new Date(p.projectedDate).toLocaleDateString("en-IN", { month: "short", year: "numeric" })}`}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className={`text-[10px] py-0 ${statusConfig.color} ${statusConfig.border}`}>{statusConfig.label}</Badge>
+                  <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">{p.progress.toFixed(0)}%</span>
+                </motion.div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Goals grid */}
       {loading ? (

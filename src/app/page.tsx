@@ -17,6 +17,7 @@ import { CalendarView } from "@/components/calendar/calendar-view";
 import { BillsView } from "@/components/bills/bills-view";
 import { InvestmentsView } from "@/components/investments/investments-view";
 import { NetWorthView } from "@/components/networth/networth-view";
+import { TaxView } from "@/components/tax/tax-view";
 import { AchievementsView } from "@/components/achievements/achievements-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { SettingsView } from "@/components/settings/settings-view";
@@ -68,6 +69,8 @@ export default function Home() {
         return <InvestmentsView />;
       case "networth":
         return <NetWorthView />;
+      case "tax":
+        return <TaxView />;
       case "advisor":
         return <AdvisorView />;
       case "insights":
