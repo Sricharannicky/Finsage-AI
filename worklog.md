@@ -655,3 +655,65 @@ Added 1 new Prisma model:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 9 — Web Dev Review Round (Cron Trigger 2026-07-02 14:30)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 19 nav views navigate correctly (added Benchmark)
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+
+### New Features Added (Phase 9 — 1 major feature)
+
+**1. Financial Benchmarking** (new view + API)
+- Compares user's financial ratios against recommended standards
+- 6 benchmark ratios analyzed:
+  - Savings Rate (rec: 20-30%) — % of income saved monthly
+  - Expense Ratio (rec: 50-70%) — % of income spent
+  - Emergency Fund (rec: 3-6 months) — months of expenses covered
+  - Debt-to-Income (rec: <20%) — EMI as % of income
+  - Housing Ratio (rec: 25-30%) — rent as % of income
+  - Investment Allocation (rec: 40-60%) — investments as % of net worth
+- Hero card with overall score (0-100), grade, in-range count, net worth
+- Comparison bar chart: user values vs recommended ranges (green=in range, red=out)
+- 6 ratio cards with: icon, user value, recommended range, in/out of range status, personalized advice
+- Overall score calculation: averages per-ratio scores with distance penalty
+- API: `GET /api/ai/benchmark`
+- Sample: Score 46/100 (Poor), 0/6 in range (demo has overspending scenario)
+
+### Styling Improvements (Phase 9)
+- Benchmark hero card uses gradient-emerald with blur accents (consistent with Net Worth/Tax heroes)
+- Ratio cards use conditional borders (emerald for in-range, rose for out-of-range)
+- Comparison chart with color-coded bars (green/red) for instant visual feedback
+- Consistent badge styling across all benchmark cards
+
+### New API Routes (1 added in Phase 9)
+- `GET /api/ai/benchmark` — Financial ratio benchmarking with 6 metrics + personalized advice
+
+### New Components (1 added)
+- `src/components/benchmark/benchmark-view.tsx` — Financial benchmarking view
+
+### Verification Results (Phase 9)
+- ✅ Benchmark API: 6 ratios analyzed, score 46/100, personalized advice per ratio
+- ✅ All 19 views navigate without errors
+- ✅ VLM confirmed Benchmark view renders correctly (score, chart, ratio cards)
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1-9. ~~All previous features~~ ✅ DONE (Phases 3-8)
+10. ~~**Financial benchmarking**~~ ✅ DONE (Phase 9)
+11. **More ML models**: Add Random Forest approximation for category predictions
+12. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+13. **PWA / offline**: Service worker for offline transaction viewing
+14. **Email notifications**: Send budget-exceeded / goal-completion emails
+15. **Multi-user sharing**: Shared household budgets with role-based access
+16. **Bill auto-payment simulation**: Auto-deduct bills on due date
+17. **Currency conversion**: Live rates for multi-currency support
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)
