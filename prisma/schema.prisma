@@ -1,0 +1,144 @@
+// AI Personal Budget Planning Agent - Database Schema
+// Fintech-grade schema for personal finance management
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  avatar       String?
+  currency     String   @default("INR")
+  monthlyIncomeGoal Float @default(0)
+  savingsTarget    Float @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  incomes       Income[]
+  expenses      Expense[]
+  budgets       Budget[]
+  goals         SavingsGoal[]
+  chats         AiChat[]
+  notifications Notification[]
+  predictions   Prediction[]
+}
+
+model Income {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Float
+  source    String
+  category  String
+  date      DateTime
+  note      String?
+  recurring Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model Expense {
+  id            String   @id @default(cuid())
+  userId        String
+  amount        Float
+  category      String
+  date          DateTime
+  note          String?
+  paymentMethod String   @default("Cash")
+  recurring     Boolean  @default(false)
+  flagged       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model Budget {
+  id       String @id @default(cuid())
+  userId   String
+  category String
+  amount   Float
+  period   String @default("monthly") // weekly | monthly
+  month    String // YYYY-MM
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, month, period])
+  @@index([userId, month])
+}
+
+model SavingsGoal {
+  id            String   @id @default(cuid())
+  userId        String
+  title         String
+  category      String
+  targetAmount  Float
+  currentAmount Float   @default(0)
+  deadline      DateTime?
+  priority      String   @default("medium") // low | medium | high
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AiChat {
+  id        String   @id @default(cuid())
+  userId    String
+  role      String // user | assistant | system
+  content   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Prediction {
+  id            String   @id @default(cuid())
+  userId        String
+  type          String // next_expense | expected_savings | future_balance
+  value         Float
+  confidence    Float
+  month         String // YYYY-MM
+  details       String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, month])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // budget_exceeded | goal_update | monthly_summary | savings_reminder | ai_tip | overspending
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  severity  String   @default("info") // info | warning | success | danger
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
+}
