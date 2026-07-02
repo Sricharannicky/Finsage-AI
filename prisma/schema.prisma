@@ -29,6 +29,9 @@ model User {
   chats         AiChat[]
   notifications Notification[]
   predictions   Prediction[]
+  bills         Bill[]
+  investments   Investment[]
+  achievements  Achievement[]
 }
 
 model Income {
@@ -141,4 +144,59 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read, createdAt])
+}
+
+model Bill {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  amount      Float
+  category    String
+  dueDay      Int // day of month (1-31)
+  nextDueDate DateTime
+  frequency   String   @default("monthly") // weekly | monthly | quarterly | yearly
+  paid        Boolean  @default(false)
+  autoPay     Boolean  @default(false)
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, paid])
+  @@index([userId, nextDueDate])
+}
+
+model Investment {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String // stock | mutual_fund | etf | crypto | fixed_deposit | ppf | gold | other
+  investedAmount Float
+  currentValue  Float
+  units        Float   @default(0)
+  purchaseDate DateTime
+  note         String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Achievement {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String // first_transaction | savings_streak | budget_master | goal_crusher | no_spend_week | emergency_fund | etc
+  title       String
+  description String
+  icon        String
+  unlockedAt  DateTime @default(now())
+  progress    Float    @default(100) // 0-100, 100 = unlocked
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
 }

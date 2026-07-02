@@ -9,7 +9,7 @@ import {
 import {
   LayoutDashboard, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, PiggyBank, Target,
   Bot, Sparkles, Layers, BarChart3, Settings, Moon, Sun, Plus, FileDown, Upload,
-  TrendingUp, Home, CalendarDays,
+  TrendingUp, Home, CalendarDays, Receipt, Trophy,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ViewType } from "@/components/layout/app-shell";
@@ -31,11 +31,14 @@ export function CommandPalette({ open, onOpenChange, onNavigate, onQuickAdd }: C
     { id: "expenses", label: "Expenses", icon: ArrowUpCircle, desc: "Track spending" },
     { id: "budgets", label: "Budgets", icon: PiggyBank, desc: "Plan spending" },
     { id: "goals", label: "Savings Goals", icon: Target, desc: "Track targets" },
+    { id: "bills", label: "Bills & Subscriptions", icon: Receipt, desc: "Due date reminders" },
+    { id: "investments", label: "Investments", icon: TrendingUp, desc: "Portfolio tracker" },
     { id: "advisor", label: "AI Advisor", icon: Bot, desc: "Chat with FinSage" },
     { id: "insights", label: "AI Insights", icon: Sparkles, desc: "Analysis & predictions" },
     { id: "categories", label: "Categories", icon: Layers, desc: "Category analytics" },
     { id: "calendar", label: "Spending Calendar", icon: CalendarDays, desc: "Daily heatmap" },
     { id: "reports", label: "Reports", icon: BarChart3, desc: "Trends & export" },
+    { id: "achievements", label: "Achievements", icon: Trophy, desc: "Financial milestones" },
     { id: "settings", label: "Settings", icon: Settings, desc: "Profile & preferences" },
   ];
 

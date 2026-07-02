@@ -153,6 +153,38 @@ export async function POST() {
     created.goals++;
   }
 
+  // Sample bills
+  const bills = [
+    { name: "House Rent", amount: 18000, category: "Rent", dueDay: 1, frequency: "monthly", autoPay: true, note: "Monthly rent" },
+    { name: "Netflix Subscription", amount: 649, category: "Entertainment", dueDay: 15, frequency: "monthly", autoPay: true, note: "Premium plan" },
+    { name: "Electricity Bill", amount: 2200, category: "Utilities", dueDay: 20, frequency: "monthly", autoPay: false },
+    { name: "Mobile Recharge", amount: 399, category: "Utilities", dueDay: 5, frequency: "monthly", autoPay: true },
+    { name: "Gym Membership", amount: 1500, category: "Healthcare", dueDay: 10, frequency: "monthly", autoPay: false },
+    { name: "Internet Bill", amount: 1199, category: "Utilities", dueDay: 25, frequency: "monthly", autoPay: true },
+  ];
+  for (const b of bills) {
+    const next = new Date();
+    next.setDate(b.dueDay);
+    if (next < new Date()) next.setMonth(next.getMonth() + 1);
+    await db.bill.create({
+      data: { userId: user.id, ...b, nextDueDate: next, paid: false },
+    });
+  }
+
+  // Sample investments
+  const investments = [
+    { name: "Nifty 50 Index Fund", type: "mutual_fund", investedAmount: 50000, currentValue: 62000, units: 1240, purchaseDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 180) },
+    { name: "HDFC Balanced Fund", type: "mutual_fund", investedAmount: 30000, currentValue: 33500, units: 850, purchaseDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 120) },
+    { name: "SBI Fixed Deposit", type: "fixed_deposit", investedAmount: 100000, currentValue: 107500, units: 0, purchaseDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365) },
+    { name: "Gold ETF", type: "etf", investedAmount: 20000, currentValue: 23800, units: 4.5, purchaseDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90) },
+    { name: "PPF Account", type: "ppf", investedAmount: 150000, currentValue: 168000, units: 0, purchaseDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 400) },
+  ];
+  for (const inv of investments) {
+    await db.investment.create({
+      data: { userId: user.id, ...inv, note: null },
+    });
+  }
+
   // Welcome notification
   await db.notification.create({
     data: {

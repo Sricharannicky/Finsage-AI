@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { api } from "@/lib/api-client";
 import { formatCurrency, formatRelativeTime, getCategoryIcon } from "@/lib/constants";
 import { LoadingState, StatCardSkeleton, CardSkeleton, ListSkeleton } from "@/components/shared";
+import { MonthComparisonWidget } from "@/components/dashboard/month-comparison-widget";
 import type { ViewType } from "@/components/layout/app-shell";
 
 interface DashboardData {
@@ -311,6 +312,9 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
               )}
             </CardContent>
           </Card>
+
+          {/* Month-over-month comparison widget */}
+          <MonthComparisonWidget />
         </div>
 
         {/* Right col - health, AI, goals */}

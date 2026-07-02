@@ -14,6 +14,9 @@ import { AdvisorView } from "@/components/ai/advisor-view";
 import { InsightsView } from "@/components/insights/insights-view";
 import { CategoriesView } from "@/components/categories/categories-view";
 import { CalendarView } from "@/components/calendar/calendar-view";
+import { BillsView } from "@/components/bills/bills-view";
+import { InvestmentsView } from "@/components/investments/investments-view";
+import { AchievementsView } from "@/components/achievements/achievements-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { SettingsView } from "@/components/settings/settings-view";
 import { Loader2 } from "lucide-react";
@@ -58,6 +61,10 @@ export default function Home() {
         return <BudgetView />;
       case "goals":
         return <GoalView />;
+      case "bills":
+        return <BillsView />;
+      case "investments":
+        return <InvestmentsView />;
       case "advisor":
         return <AdvisorView />;
       case "insights":
@@ -68,6 +75,8 @@ export default function Home() {
         return <CalendarView />;
       case "reports":
         return <ReportsView />;
+      case "achievements":
+        return <AchievementsView />;
       case "settings":
         return <SettingsView />;
       default:

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, LayoutDashboard, ArrowDownCircle, ArrowUpCircle, PiggyBank, Target,
   Sparkles, BarChart3, Bot, Settings, Bell, Menu, X, LogOut, Sun, Moon,
-  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers, CalendarDays,
+  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers, CalendarDays, Receipt, TrendingUp as TrendingUpIcon, Trophy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -28,11 +28,14 @@ export type ViewType =
   | "expenses"
   | "budgets"
   | "goals"
+  | "bills"
+  | "investments"
   | "advisor"
   | "insights"
   | "categories"
   | "calendar"
   | "reports"
+  | "achievements"
   | "settings";
 
 const NAV_ITEMS: { id: ViewType; label: string; icon: any; description: string }[] = [
@@ -42,11 +45,14 @@ const NAV_ITEMS: { id: ViewType; label: string; icon: any; description: string }
   { id: "expenses", label: "Expenses", icon: ArrowUpCircle, description: "Track spending" },
   { id: "budgets", label: "Budgets", icon: PiggyBank, description: "Plan spending" },
   { id: "goals", label: "Goals", icon: Target, description: "Savings targets" },
+  { id: "bills", label: "Bills", icon: Receipt, description: "Reminders & due dates" },
+  { id: "investments", label: "Investments", icon: TrendingUpIcon, description: "Portfolio tracker" },
   { id: "advisor", label: "AI Advisor", icon: Bot, description: "Chat with FinSage" },
   { id: "insights", label: "AI Insights", icon: Sparkles, description: "Analysis & predictions" },
   { id: "categories", label: "Categories", icon: Layers, description: "Category drill-down" },
   { id: "calendar", label: "Calendar", icon: CalendarDays, description: "Spending heatmap" },
   { id: "reports", label: "Reports", icon: BarChart3, description: "Trends & export" },
+  { id: "achievements", label: "Achievements", icon: Trophy, description: "Financial milestones" },
   { id: "settings", label: "Settings", icon: Settings, description: "Profile & preferences" },
 ];
 
@@ -97,10 +103,11 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-generate notifications + recurring transactions on mount
+  // Auto-generate notifications + recurring transactions + check achievements on mount
   useEffect(() => {
     api.post("/api/notifications").catch(() => {});
     api.post("/api/recurring").catch(() => {});
+    api.get("/api/achievements").catch(() => {}); // triggers achievement unlock checks
   }, []);
 
   async function markAllRead() {
@@ -323,7 +330,7 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-x-hidden">
+        <main className="flex-1 p-4 lg:p-5 overflow-x-hidden">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}

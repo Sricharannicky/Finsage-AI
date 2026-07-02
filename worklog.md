@@ -224,3 +224,112 @@ with pre-loaded transactions, budgets, and goals.
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - AI response JSON parsing has try/catch fallbacks (could use zod schemas)
+
+---
+
+## Phase 4 — Web Dev Review Round (Cron Trigger 2026-07-02 13:15)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 15 nav views navigate correctly (Dashboard, Transactions, Income, Expenses,
+  Budgets, Goals, Bills, Investments, AI Advisor, AI Insights, Categories, Calendar,
+  Reports, Achievements, Settings)
+- ✅ AI Advisor chat responds with personalized advice
+- ✅ FAB menu, command palette (Cmd+K), add-expense dialog all work
+- ✅ No runtime errors / TypeScript errors / lint errors
+- ✅ VLM visual analysis confirmed all new views render well
+
+### New Features Added (Phase 4 — 4 major features + 3 new Prisma models)
+
+**1. Bills & Subscriptions Tracker** (new view + API)
+- Track recurring bills (rent, utilities, subscriptions) with due day, frequency, auto-pay flag
+- Status badges: Overdue / Due Soon / Upcoming / Paid (auto-computed from nextDueDate)
+- "Pay" button marks bill paid, optionally creates an expense, advances next due date
+- 4 stat cards: Monthly Total, Unpaid Total, Overdue Count, Due Soon Count
+- CRUD with add/edit/delete dialogs
+- Models: `Bill` (Prisma)
+- API: `GET/POST/PUT/DELETE /api/bills`, `POST /api/bills/pay`
+- Sample data: 6 bills seeded (Netflix, Electricity, Internet, Gym, Mobile, + test)
+
+**2. Investment Portfolio Tracker** (new view + API)
+- Track investments (stocks, mutual funds, ETFs, crypto, FDs, PPF, gold, other)
+- Per-holding: invested amount, current value, units, purchase date → auto-computed gain & gain%
+- Portfolio summary: Total Invested, Current Value, Total Gain, Returns %
+- Allocation pie chart by type + Invested-vs-Current bar chart by type
+- Holdings list with gain/loss indicators (green/red)
+- Models: `Investment` (Prisma)
+- API: `GET/POST/PUT/DELETE /api/investments`
+- Sample data: 5 investments seeded (₹3.5L invested, ₹4L value, +₹44.8K gain)
+
+**3. Achievements / Gamification System** (new view + API)
+- 14 achievement types with auto-detection logic:
+  First Steps, Getting Started, Dedicated Tracker, Planner, Dreamer, Goal Crusher,
+  Savings Star, Wealth Builder, Budget Master, Safety Net, Frugal Streak, Curious Mind,
+  Trend Reverser, Diversified
+- Each achievement tracks progress 0-100%; auto-unlocks + sends notification when hit 100%
+- Achievements auto-checked on app mount (via GET /api/achievements side-effect)
+- Progress overview card with X/14 unlocked + overall % bar
+- Unlocked grid (gold cards with icons) + In-progress grid (with progress bars)
+- "Newly unlocked" toast notification on view load
+- Models: `Achievement` (Prisma, unique on userId+type)
+- API: `GET /api/achievements` (auto-detects + unlocks + returns all)
+- Demo user: 7/14 auto-unlocked on first load
+
+**4. Month-over-Month Comparison Widget** (dashboard)
+- Side-by-side comparison: current month vs previous month
+- Rows: Income, Expense (inverted logic), Savings, Savings Rate (percentage points)
+- Change badges with arrow icons + % change
+- Top 3 category changes with before→after values + % change badges
+- Lazy-loads after dashboard renders
+- API: `GET /api/dashboard/comparison`
+
+### Styling Improvements (Phase 4)
+- Tightened main content padding (lg:p-6 → lg:p-5) per VLM feedback
+- Investment cards use conditional gradient (emerald for gains, rose for losses)
+- Achievement cards use gold accent theme (amber-500/10 backgrounds)
+- Bills use status-colored borders (rose/amber/blue/emerald) for instant scanability
+- Comparison widget uses semantic colors (green=good, red=bad, with invert for expenses)
+
+### New API Routes (5 added in Phase 4)
+- `GET/POST/PUT/DELETE /api/bills` — Bills CRUD
+- `POST /api/bills/pay` — Mark bill paid + create expense + advance due date
+- `GET/POST/PUT/DELETE /api/investments` — Investments CRUD
+- `GET /api/achievements` — Auto-detect + unlock + return achievements
+- `GET /api/dashboard/comparison` — Month-over-month comparison data
+
+### New Components (4 added)
+- `src/components/bills/bills-view.tsx` — Bills & subscriptions tracker
+- `src/components/investments/investments-view.tsx` — Portfolio tracker
+- `src/components/achievements/achievements-view.tsx` — Gamification dashboard
+- `src/components/dashboard/month-comparison-widget.tsx` — MoM comparison widget
+
+### Database Schema Changes (Phase 4)
+Added 3 new Prisma models:
+- `Bill` — recurring bills with due dates, frequency, auto-pay, paid status
+- `Investment` — portfolio holdings with invested/current values, units, type
+- `Achievement` — unlocked/in-progress achievements with progress tracking
+
+### Verification Results (Phase 4)
+- ✅ Bills API: 6 bills loaded, stats computed correctly
+- ✅ Investments API: 5 holdings, ₹3.5L invested, ₹4L value, +₹44.8K gain
+- ✅ Achievements API: 7/14 auto-unlocked on first load
+- ✅ Comparison API: returns current vs previous month with changes
+- ✅ All 15 views navigate without errors
+- ✅ VLM confirmed Bills, Investments, Achievements all render correctly
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1. ~~**PDF reports**~~ ✅ DONE (Phase 3)
+2. ~~**Investment tracking**~~ ✅ DONE (Phase 4)
+3. **More ML models**: Add Random Forest approximation for category predictions
+4. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+5. **PWA / offline**: Service worker for offline transaction viewing
+6. **Email notifications**: Send budget-exceeded / goal-completion emails
+7. **Multi-user sharing**: Shared household budgets with role-based access
+8. **Bill auto-payment simulation**: Auto-deduct bills on due date
+9. **Net worth tracker**: Combine savings + investments + assets over time
+10. **AI-powered investment rebalancing suggestions**
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- AI response JSON parsing has try/catch fallbacks (could use zod schemas)
