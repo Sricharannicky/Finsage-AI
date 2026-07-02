@@ -333,3 +333,92 @@ Added 3 new Prisma models:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - AI response JSON parsing has try/catch fallbacks (could use zod schemas)
+
+---
+
+## Phase 5 — Web Dev Review Round (Cron Trigger 2026-07-02 13:41)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 16 nav views navigate correctly (added Net Worth)
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+- Fixed: dev server restart needed after Prisma schema changes (Bill/Investment/Achievement models weren't available until restart)
+
+### New Features Added (Phase 5 — 3 major features)
+
+**1. Net Worth Tracker** (new view + API)
+- Complete financial picture: cumulative savings + investment value over 12 months
+- Hero card with current net worth, monthly change badge, 12-month growth
+- 3 composition cards: Savings, Investments, Investment Gain (color-coded)
+- 12-month area chart: net worth + investment value + savings (dashed)
+- Asset allocation pie chart with progress bars (savings % vs investments %)
+- Monthly progression list with month-over-month change indicators
+- API: `GET /api/networth` (optimized with running totals, 0.03s response)
+- Sample data: ₹3.77L net worth, ₹4L investments, +47.2% yearly growth
+
+**2. AI Investment Insights & Rebalancing** (API + widget on Investments view)
+- Diversification score (0-100): based on asset type count + concentration
+- Risk score (0-100): weighted by asset type (stocks/crypto=high, FD/PPF=low)
+- 6 detection rules: portfolio performance, diversification, over-concentration,
+  best/worst performers, risk assessment, investment-to-savings ratio
+- Recommendations with priority (high/medium/low) and actionable suggestions
+- Rebalancing advice for over-concentrated or high-risk portfolios
+- API: `GET /api/ai/investment-insights`
+- UI: Violet-themed insights panel on Investments view with score gauges,
+  insight cards (✅/⚠️/💡), and recommendation badges
+
+**3. Dashboard Net Worth Sparkline Widget**
+- Mini area chart showing 12-month net worth trend
+- Current net worth value + monthly change % badge
+- Clickable card navigates to full Net Worth view
+- Lazy-loads after dashboard renders
+- Color-coded: emerald for positive trend, rose for negative
+
+### Styling Improvements (Phase 5)
+- Tightened dashboard vertical spacing (space-y-6 → space-y-5)
+- Tightened chart column spacing (space-y-6 → space-y-4)
+- Improved balance card savings rate text contrast (white/70 → white/90 + font-medium)
+- Net Worth hero card uses gradient-emerald with blur accents
+- Investment insights use violet theme with score gauges and progress bars
+- Sparkline widget uses mesh-bg for visual depth
+
+### New API Routes (2 added in Phase 5)
+- `GET /api/networth` — 12-month net worth series + breakdown (optimized, 0.03s)
+- `GET /api/ai/investment-insights` — Portfolio analysis with diversification/risk scores
+
+### New Components (3 added)
+- `src/components/networth/networth-view.tsx` — Full net worth tracker view
+- `src/components/dashboard/networth-sparkline.tsx` — Mini sparkline widget
+- (Investment insights integrated into existing investments-view.tsx)
+
+### Performance Fix
+- **Net Worth API timeout (60s → 0.03s)**: Replaced per-month filtering of all
+  income/expenses with single-pass running totals using sorted arrays + pointer
+  advancement. 200x+ performance improvement.
+
+### Verification Results (Phase 5)
+- ✅ Net Worth API: 0.033s response, ₹3.77L net worth, 12-month series
+- ✅ AI Investment Insights: diversification 69/100, risk 23/100, 3 insights, 1 recommendation
+- ✅ All 16 views navigate without errors
+- ✅ VLM confirmed Net Worth, Investments AI insights, Dashboard sparkline all render
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1. ~~**PDF reports**~~ ✅ DONE (Phase 3)
+2. ~~**Investment tracking**~~ ✅ DONE (Phase 4)
+3. ~~**Net worth tracker**~~ ✅ DONE (Phase 5)
+4. ~~**AI investment insights**~~ ✅ DONE (Phase 5)
+5. **More ML models**: Add Random Forest approximation for category predictions
+6. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+7. **PWA / offline**: Service worker for offline transaction viewing
+8. **Email notifications**: Send budget-exceeded / goal-completion emails
+9. **Multi-user sharing**: Shared household budgets with role-based access
+10. **Bill auto-payment simulation**: Auto-deduct bills on due date
+11. **Financial goals timeline projection**: When will you reach each goal?
+12. **Tax saving suggestions**: Section 80C/80D optimization recommendations
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)

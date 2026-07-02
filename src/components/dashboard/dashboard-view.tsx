@@ -20,6 +20,7 @@ import { api } from "@/lib/api-client";
 import { formatCurrency, formatRelativeTime, getCategoryIcon } from "@/lib/constants";
 import { LoadingState, StatCardSkeleton, CardSkeleton, ListSkeleton } from "@/components/shared";
 import { MonthComparisonWidget } from "@/components/dashboard/month-comparison-widget";
+import { NetWorthSparkline } from "@/components/dashboard/networth-sparkline";
 import type { ViewType } from "@/components/layout/app-shell";
 
 interface DashboardData {
@@ -92,8 +93,7 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
   const monthLabel = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -175,7 +175,7 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
                   <Wallet className="size-5 text-white" />
                 </div>
               </div>
-              <p className="text-[11px] text-white/70 mt-2">Savings rate: {data.savingsRate.toFixed(1)}%</p>
+              <p className="text-[11px] text-white/90 mt-2 font-medium">Savings rate: {data.savingsRate.toFixed(1)}%</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -205,7 +205,7 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         {/* Left col - charts */}
-        <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           {/* Income vs Expense trend */}
           <Card className="shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -319,6 +319,9 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
 
         {/* Right col - health, AI, goals */}
         <div className="space-y-4 lg:space-y-6">
+          {/* Net Worth sparkline */}
+          <NetWorthSparkline onViewChange={onViewChange} />
+
           {/* Financial Health Score */}
           <Card className="shadow-sm relative overflow-hidden">
             <div className="absolute inset-0 mesh-bg opacity-50" />

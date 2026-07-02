@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, LayoutDashboard, ArrowDownCircle, ArrowUpCircle, PiggyBank, Target,
   Sparkles, BarChart3, Bot, Settings, Bell, Menu, X, LogOut, Sun, Moon,
-  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers, CalendarDays, Receipt, TrendingUp as TrendingUpIcon, Trophy,
+  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers, CalendarDays, Receipt, TrendingUp as TrendingUpIcon, Trophy, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -30,6 +30,7 @@ export type ViewType =
   | "goals"
   | "bills"
   | "investments"
+  | "networth"
   | "advisor"
   | "insights"
   | "categories"
@@ -47,6 +48,7 @@ const NAV_ITEMS: { id: ViewType; label: string; icon: any; description: string }
   { id: "goals", label: "Goals", icon: Target, description: "Savings targets" },
   { id: "bills", label: "Bills", icon: Receipt, description: "Reminders & due dates" },
   { id: "investments", label: "Investments", icon: TrendingUpIcon, description: "Portfolio tracker" },
+  { id: "networth", label: "Net Worth", icon: Wallet, description: "Complete financial picture" },
   { id: "advisor", label: "AI Advisor", icon: Bot, description: "Chat with FinSage" },
   { id: "insights", label: "AI Insights", icon: Sparkles, description: "Analysis & predictions" },
   { id: "categories", label: "Categories", icon: Layers, description: "Category drill-down" },
