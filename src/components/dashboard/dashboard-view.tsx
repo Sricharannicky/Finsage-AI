@@ -18,7 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { api } from "@/lib/api-client";
 import { formatCurrency, formatRelativeTime, getCategoryIcon } from "@/lib/constants";
-import { LoadingState } from "@/components/shared";
+import { LoadingState, StatCardSkeleton, CardSkeleton, ListSkeleton } from "@/components/shared";
 import type { ViewType } from "@/components/layout/app-shell";
 
 interface DashboardData {
@@ -51,6 +51,8 @@ interface DashboardData {
 export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) => void }) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<string[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(true);
 
   useEffect(() => {
     loadDashboard();
@@ -61,6 +63,12 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
     try {
       const res = await api.get<DashboardData>("/api/dashboard/summary");
       setData(res);
+      // Load AI insights lazily AFTER dashboard renders
+      setInsightsLoading(true);
+      api.get<{ insights: string[] }>("/api/ai/cached-insights")
+        .then((r) => setInsights(r.insights))
+        .catch(() => setInsights([]))
+        .finally(() => setInsightsLoading(false));
     } catch (err: any) {
       console.error("Dashboard load error:", err);
     } finally {
@@ -68,7 +76,7 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
     }
   }
 
-  if (loading) return <LoadingState message="Analyzing your finances..." />;
+  if (loading) return <DashboardSkeleton />;
   if (!data) return <div className="text-center py-16 text-muted-foreground">Failed to load dashboard</div>;
 
   const budgetUsed = data.monthlyBudget > 0 ? (data.totalExpense / data.monthlyBudget) * 100 : 0;
@@ -340,10 +348,22 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
               <CardDescription className="text-xs">Personalized recommendations</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {data.aiSuggestions.length === 0 ? (
+              {insightsLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex gap-2 p-2.5 rounded-lg bg-card/50 border border-emerald-500/10">
+                      <div className="size-3.5 rounded bg-muted animate-pulse flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-1">
+                        <div className="h-2 rounded bg-muted animate-pulse w-3/4" />
+                        <div className="h-2 rounded bg-muted animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : insights.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">Add transactions to unlock AI insights</p>
               ) : (
-                data.aiSuggestions.slice(0, 3).map((s, i) => (
+                insights.slice(0, 3).map((s, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, x: -8 }}
@@ -488,6 +508,34 @@ function HealthScoreGauge({ score, grade }: { score: number; grade: string }) {
         <span className="text-xs text-muted-foreground">/ 100</span>
         <Badge className="mt-1 text-[10px]" style={{ backgroundColor: `${color}20`, color }}>{grade}</Badge>
       </div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-40 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-56 bg-muted/70 rounded animate-pulse" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-9 w-28 bg-muted rounded animate-pulse" />
+          <div className="h-9 w-24 bg-muted rounded animate-pulse" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <CardSkeleton className="lg:col-span-2 h-[320px]" />
+        <CardSkeleton className="h-[320px]" />
+      </div>
+      <CardSkeleton className="h-[300px]" />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import {
-  ArrowUpCircle, Plus, Search, Pencil, Trash2, Download, Filter, TrendingDown, Flag,
+  ArrowUpCircle, Plus, Search, Pencil, Trash2, Download, Filter, TrendingDown, Flag, Upload,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { EXPENSE_CATEGORIES, formatCurrency, formatDate, getCategoryColor, getCa
 import { getCurrentMonthKey } from "@/lib/finance";
 import { toast } from "sonner";
 import type { Expense, ExpenseCategory } from "@/lib/types";
+import { CsvImportDialog } from "@/components/shared/csv-import-dialog";
 
 export function ExpenseView() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -26,6 +27,7 @@ export function ExpenseView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Expense | undefined>();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [month, setMonth] = useState(getCurrentMonthKey());
@@ -78,6 +80,9 @@ export function ExpenseView() {
         icon={ArrowUpCircle}
         actions={
           <>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setImportOpen(true)}>
+              <Upload className="size-3.5" /> Import
+            </Button>
             <Button variant="outline" size="sm" className="gap-1.5" asChild>
               <a href={`/api/export?type=expenses&month=${month}`} download>
                 <Download className="size-3.5" /> Export
@@ -272,6 +277,8 @@ export function ExpenseView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CsvImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadExpenses} />
     </div>
   );
 }

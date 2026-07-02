@@ -96,19 +96,43 @@ User, Income, Expense, Budget, SavingsGoal, AiChat, Prediction, Notification.
   webDevReview cron also verifies/restarts as a safety net.
 
 ### Priority recommendations for next phase
-1. **Performance**: Cache AI quick-insights on the dashboard (currently re-generated each
-   load). Add a `/api/ai/cache` layer or compute insights on transaction change.
-2. **CSV Import**: Add CSV import flow (export already works) — parse uploaded CSV into
-   income/expense records.
-3. **Recurring transaction automation**: Auto-create recurring income/expense entries on
-   month rollover (currently just a flag).
-4. **PDF reports**: Generate downloadable PDF reports (currently CSV only).
+1. ~~**Performance**: Cache AI quick-insights~~ ✅ DONE (Phase 2) — `/api/ai/cached-insights`
+   with 5-min TTL cache; dashboard summary no longer blocks on LLM. Response time: 55ms (was 6-15s).
+2. ~~**CSV Import**~~ ✅ DONE (Phase 2) — `/api/import` endpoint + CSV Import dialog with
+   file upload, paste, template download, and per-row error reporting.
+3. ~~**Recurring transaction automation**~~ ✅ DONE (Phase 2) — `/api/recurring` endpoint
+   auto-generates recurring income/expense entries on month rollover (deduped, triggered
+   on app mount).
+4. **PDF reports**: Generate downloadable PDF reports (currently CSV only). NEXT PRIORITY.
 5. **More ML models**: Add Random Forest approximation (currently linear regression + MA)
    and category-level confidence intervals.
 6. **Notifications scheduling**: Add a scheduled job to generate weekly reports and
    monthly summaries proactively.
 7. **PWA / offline**: Add service worker for offline transaction viewing.
-8. **Multi-currency**: Fully wire the currency field (currently INR-hardcoded formatting).
+8. ~~**Multi-currency**~~ ✅ DONE (Phase 2) — Currency selector in Settings (INR/USD/EUR/GBP/JPY),
+   stored on user, used in formatCurrency.
+
+### Phase 2 — New Features Added (this round)
+- **Unified Transactions View**: combined income+expense list with type tabs (All/Income/Expense),
+  category filter, search, month picker, and 3 summary cards (Income/Expense/Net). Added to nav.
+- **Category Analytics View**: deep drill-down per category — 6-month trend line chart,
+  by-payment-method bar chart, recent samples, click-to-select category list. Added to nav.
+- **Quick Add FAB**: global floating action button (bottom-right) with expandable menu
+  (Add Income / Add Expense / Import CSV) — available on every view.
+- **CSV Import**: full dialog with file upload, paste-CSV textarea, template download,
+  per-row error reporting, and success summary.
+- **Recurring Auto-Generation**: `POST /api/recurring` dedupes by category+source and
+  creates current-month copies of recurring templates. Triggered on app mount.
+- **AI Insights Caching**: `/api/ai/cached-insights` with 5-min TTL + force-refresh (POST).
+  Dashboard now loads in ~55ms (was 6-15s); AI insights load lazily with skeleton.
+- **Notification Management**: per-notification delete (X button), "clear all read" button,
+  improved hover states.
+- **Password Change**: `/api/auth/password` endpoint + dialog in Settings (validates current pw).
+- **Currency Selection**: INR/USD/EUR/GBP/JPY selector in Settings, stored on user.
+- **Skeleton Loaders**: DashboardSkeleton, StatCardSkeleton, CardSkeleton, ListSkeleton,
+  ChartSkeleton for polished loading states.
+- **New API Routes**: `/api/import`, `/api/recurring`, `/api/ai/cached-insights`,
+  `/api/categories`, `/api/auth/password`, `/api/notifications/clear`, `/api/notifications/[id]`.
 
 ### Tech debt
 - Some `any` types in API route bodies (lint disabled `@typescript-eslint/no-explicit-any`).

@@ -9,7 +9,7 @@ import {
   buildCategoryBreakdown,
   buildIncomeExpenseTrend,
 } from "@/lib/finance";
-import { generateQuickInsights } from "@/lib/ai";
+// AI insights are now loaded lazily via /api/ai/cached-insights to keep dashboard fast
 
 export async function GET(req: NextRequest) {
   const user = await getSessionUser();
@@ -58,7 +58,8 @@ export async function GET(req: NextRequest) {
     current: g.currentAmount,
   }));
 
-  const aiSuggestions = await generateQuickInsights(user.id);
+  // AI insights loaded lazily by client via /api/ai/cached-insights (with TTL cache)
+  const aiSuggestions: string[] = [];
 
   // Count unread notifications
   const unreadCount = await db.notification.count({

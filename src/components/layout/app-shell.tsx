@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, LayoutDashboard, ArrowDownCircle, ArrowUpCircle, PiggyBank, Target,
   Sparkles, BarChart3, Bot, Settings, Bell, Menu, X, LogOut, Sun, Moon,
-  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2,
+  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
+import { QuickAddFAB } from "@/components/shared/quick-add-fab";
 import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api-client";
 import { formatRelativeTime } from "@/lib/constants";
@@ -21,23 +22,27 @@ import type { Notification } from "@/lib/types";
 
 export type ViewType =
   | "dashboard"
+  | "transactions"
   | "income"
   | "expenses"
   | "budgets"
   | "goals"
   | "advisor"
   | "insights"
+  | "categories"
   | "reports"
   | "settings";
 
 const NAV_ITEMS: { id: ViewType; label: string; icon: any; description: string }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, description: "Overview & insights" },
+  { id: "transactions", label: "Transactions", icon: ArrowLeftRight, description: "All income & expenses" },
   { id: "income", label: "Income", icon: ArrowDownCircle, description: "Manage earnings" },
   { id: "expenses", label: "Expenses", icon: ArrowUpCircle, description: "Track spending" },
   { id: "budgets", label: "Budgets", icon: PiggyBank, description: "Plan spending" },
   { id: "goals", label: "Goals", icon: Target, description: "Savings targets" },
   { id: "advisor", label: "AI Advisor", icon: Bot, description: "Chat with FinSage" },
   { id: "insights", label: "AI Insights", icon: Sparkles, description: "Analysis & predictions" },
+  { id: "categories", label: "Categories", icon: Layers, description: "Category drill-down" },
   { id: "reports", label: "Reports", icon: BarChart3, description: "Trends & export" },
   { id: "settings", label: "Settings", icon: Settings, description: "Profile & preferences" },
 ];
@@ -76,9 +81,10 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
     return () => clearInterval(interval);
   }, []);
 
-  // Auto-generate notifications on mount
+  // Auto-generate notifications + recurring transactions on mount
   useEffect(() => {
     api.post("/api/notifications").catch(() => {});
+    api.post("/api/recurring").catch(() => {});
   }, []);
 
   async function markAllRead() {
@@ -87,6 +93,25 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
       toast.success("All notifications marked as read");
+    } catch {}
+  }
+
+  async function clearRead() {
+    try {
+      await api.post("/api/notifications/clear");
+      setNotifications((prev) => prev.filter((n) => !n.read));
+      toast.success("Read notifications cleared");
+    } catch {}
+  }
+
+  async function deleteNotification(id: string) {
+    try {
+      await api.delete(`/api/notifications/${id}`);
+      setNotifications((prev) => {
+        const next = prev.filter((n) => n.id !== id);
+        setUnreadCount(next.filter((n) => !n.read).length);
+        return next;
+      });
     } catch {}
   }
 
@@ -205,16 +230,23 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
                     transition={{ duration: 0.15 }}
                     className="absolute right-0 mt-2 w-80 sm:w-96 glass-strong rounded-2xl shadow-xl border overflow-hidden"
                   >
-                    <div className="flex items-center justify-between p-4 border-b">
+                    <div className="flex items-center justify-between p-3 border-b">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold text-sm">Notifications</h3>
                         {unreadCount > 0 && <Badge variant="secondary" className="text-xs">{unreadCount} new</Badge>}
                       </div>
-                      {unreadCount > 0 && (
-                        <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={markAllRead}>
-                          <CheckCheck className="size-3 mr-1" /> Mark all read
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {unreadCount > 0 && (
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={markAllRead} title="Mark all as read">
+                            <CheckCheck className="size-3 mr-1" /> Mark read
+                          </Button>
+                        )}
+                        {notifications.some((n) => n.read) && (
+                          <Button variant="ghost" size="sm" className="h-7 text-xs text-rose-500 hover:text-rose-600" onClick={clearRead} title="Clear read notifications">
+                            <Trash2 className="size-3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <ScrollArea className="h-[400px]">
                       {notifications.length === 0 ? (
@@ -227,7 +259,7 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
                           {notifications.map((n) => (
                             <div
                               key={n.id}
-                              className={`p-3 flex gap-3 hover:bg-accent/50 transition-colors cursor-pointer ${!n.read ? "bg-emerald-500/5" : ""}`}
+                              className={`p-3 flex gap-3 hover:bg-accent/50 transition-colors group ${!n.read ? "bg-emerald-500/5" : ""}`}
                             >
                               <div className={`mt-0.5 size-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                 n.severity === "danger" ? "bg-rose-500/15 text-rose-500" :
@@ -246,6 +278,13 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
                                 <p className="text-[10px] text-muted-foreground/70 mt-1">{formatRelativeTime(n.createdAt)}</p>
                               </div>
                               {!n.read && <div className="size-2 rounded-full bg-emerald-500 mt-1 flex-shrink-0" />}
+                              <button
+                                onClick={() => deleteNotification(n.id)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-rose-500 flex-shrink-0 mt-1"
+                                title="Delete"
+                              >
+                                <X className="size-3.5" />
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -289,6 +328,9 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
           <p>FinSage AI · Personal Budget Planning Agent · Built with Next.js, Prisma & Z.ai LLM</p>
         </footer>
       </div>
+
+      {/* Global Quick Add FAB */}
+      <QuickAddFAB />
     </div>
   );
 }

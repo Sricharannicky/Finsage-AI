@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Settings as SettingsIcon, User, Save, Moon, Sun, Download, Upload, Database,
-  Trash2, Shield, Bell, Loader2, Sparkles, LogOut,
+  Trash2, Shield, Bell, Loader2, Sparkles, LogOut, Key, Lock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { PageHeader } from "@/components/shared";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/lib/auth-store";
@@ -25,16 +26,23 @@ export function SettingsView() {
   const { theme, setTheme } = useTheme();
   const { user, setUser, logout } = useAuthStore();
   const [name, setName] = useState(user?.name || "");
+  const [currency, setCurrency] = useState(user?.currency || "INR");
   const [monthlyIncomeGoal, setMonthlyIncomeGoal] = useState(user?.monthlyIncomeGoal?.toString() || "");
   const [savingsTarget, setSavingsTarget] = useState(user?.savingsTarget?.toString() || "");
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [pwDialogOpen, setPwDialogOpen] = useState(false);
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
 
   async function handleSave() {
     setSaving(true);
     try {
       const res = await api.put<{ user: any }>("/api/settings", {
         name,
+        currency,
         monthlyIncomeGoal: parseFloat(monthlyIncomeGoal || "0"),
         savingsTarget: parseFloat(savingsTarget || "0"),
       });
@@ -95,13 +103,28 @@ export function SettingsView() {
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="h-10" />
             </div>
 
+            <div className="space-y-1.5">
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INR">₹ Indian Rupee (INR)</SelectItem>
+                  <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
+                  <SelectItem value="EUR">€ Euro (EUR)</SelectItem>
+                  <SelectItem value="GBP">£ British Pound (GBP)</SelectItem>
+                  <SelectItem value="JPY">¥ Japanese Yen (JPY)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Used for formatting amounts across the app</p>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="incomeGoal">Monthly Income Goal (₹)</Label>
+                <Label htmlFor="incomeGoal">Monthly Income Goal</Label>
                 <Input id="incomeGoal" type="number" value={monthlyIncomeGoal} onChange={(e) => setMonthlyIncomeGoal(e.target.value)} placeholder="100000" className="h-10" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="savingsTarget">Savings Target (₹)</Label>
+                <Label htmlFor="savingsTarget">Savings Target</Label>
                 <Input id="savingsTarget" type="number" value={savingsTarget} onChange={(e) => setSavingsTarget(e.target.value)} placeholder="50000" className="h-10" />
               </div>
             </div>
@@ -133,19 +156,24 @@ export function SettingsView() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2"><Shield className="size-4 text-emerald-500" /> Security</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="size-1.5 rounded-full bg-emerald-500" />
-                <span>JWT-secured sessions</span>
+            <CardContent className="space-y-3">
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className="size-1.5 rounded-full bg-emerald-500" />
+                  <span>JWT-secured sessions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="size-1.5 rounded-full bg-emerald-500" />
+                  <span>BCrypt password hashing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="size-1.5 rounded-full bg-emerald-500" />
+                  <span>HttpOnly cookies</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="size-1.5 rounded-full bg-emerald-500" />
-                <span>BCrypt password hashing</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="size-1.5 rounded-full bg-emerald-500" />
-                <span>HttpOnly cookies</span>
-              </div>
+              <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={() => setPwDialogOpen(true)}>
+                <Key className="size-3.5" /> Change Password
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -228,6 +256,56 @@ export function SettingsView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Password change dialog */}
+      <Dialog open={pwDialogOpen} onOpenChange={setPwDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Lock className="size-4 text-emerald-500" /> Change Password</DialogTitle>
+            <DialogDescription>Enter your current password and a new one</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="curPw">Current Password</Label>
+              <Input id="curPw" type="password" value={curPw} onChange={(e) => setCurPw(e.target.value)} className="h-10" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="newPw">New Password</Label>
+              <Input id="newPw" type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} className="h-10" minLength={6} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPw">Confirm New Password</Label>
+              <Input id="confirmPw" type="password" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} className="h-10" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwDialogOpen(false)}>Cancel</Button>
+            <Button
+              className="gradient-emerald text-white border-0 gap-1.5"
+              disabled={pwLoading || !curPw || !newPw || newPw !== confirmPw}
+              onClick={async () => {
+                if (newPw !== confirmPw) {
+                  toast.error("New passwords don't match");
+                  return;
+                }
+                setPwLoading(true);
+                try {
+                  await api.put("/api/auth/password", { currentPassword: curPw, newPassword: newPw });
+                  toast.success("Password changed successfully");
+                  setPwDialogOpen(false);
+                  setCurPw(""); setNewPw(""); setConfirmPw("");
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to change password");
+                } finally {
+                  setPwLoading(false);
+                }
+              }}
+            >
+              {pwLoading ? <Loader2 className="size-4 animate-spin" /> : <Key className="size-4" />} Update Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

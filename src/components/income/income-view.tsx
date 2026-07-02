@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import {
-  ArrowDownCircle, Plus, Search, Pencil, Trash2, Download, Filter, TrendingUp,
+  ArrowDownCircle, Plus, Search, Pencil, Trash2, Download, Filter, TrendingUp, Upload,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { INCOME_CATEGORIES, formatCurrency, formatDate, getCategoryColor } from 
 import { getCurrentMonthKey } from "@/lib/finance";
 import { toast } from "sonner";
 import type { Income, IncomeCategory } from "@/lib/types";
+import { CsvImportDialog } from "@/components/shared/csv-import-dialog";
 
 export function IncomeView() {
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -26,6 +27,7 @@ export function IncomeView() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Income | undefined>();
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [month, setMonth] = useState(getCurrentMonthKey());
@@ -76,6 +78,9 @@ export function IncomeView() {
         icon={ArrowDownCircle}
         actions={
           <>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setImportOpen(true)}>
+              <Upload className="size-3.5" /> Import
+            </Button>
             <Button variant="outline" size="sm" className="gap-1.5" asChild>
               <a href={`/api/export?type=income&month=${month}`} download>
                 <Download className="size-3.5" /> Export
@@ -240,6 +245,8 @@ export function IncomeView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CsvImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={loadIncomes} />
     </div>
   );
 }

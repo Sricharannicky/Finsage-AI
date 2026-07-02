@@ -5,12 +5,14 @@ import { useAuthStore } from "@/lib/auth-store";
 import { AuthView } from "@/components/auth/auth-view";
 import { AppShell, type ViewType } from "@/components/layout/app-shell";
 import { DashboardView } from "@/components/dashboard/dashboard-view";
+import { TransactionsView } from "@/components/transactions/transactions-view";
 import { IncomeView } from "@/components/income/income-view";
 import { ExpenseView } from "@/components/expenses/expense-view";
 import { BudgetView } from "@/components/budgets/budget-view";
 import { GoalView } from "@/components/goals/goal-view";
 import { AdvisorView } from "@/components/ai/advisor-view";
 import { InsightsView } from "@/components/insights/insights-view";
+import { CategoriesView } from "@/components/categories/categories-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { SettingsView } from "@/components/settings/settings-view";
 import { Loader2 } from "lucide-react";
@@ -45,6 +47,8 @@ export default function Home() {
     switch (activeView) {
       case "dashboard":
         return <DashboardView onViewChange={setActiveView} />;
+      case "transactions":
+        return <TransactionsView onViewChange={setActiveView} />;
       case "income":
         return <IncomeView />;
       case "expenses":
@@ -57,6 +61,8 @@ export default function Home() {
         return <AdvisorView />;
       case "insights":
         return <InsightsView />;
+      case "categories":
+        return <CategoriesView />;
       case "reports":
         return <ReportsView />;
       case "settings":
