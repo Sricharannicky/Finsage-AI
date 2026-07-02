@@ -72,8 +72,8 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
       const res = await api.get<DashboardData | null>("/api/dashboard/summary");
       if (!res) {
         // 401 — session expired, refresh auth (will redirect to login if needed)
-        const { refresh } = await import("@/lib/auth-store");
-        await refresh();
+        const { useAuthStore } = await import("@/lib/auth-store");
+        await useAuthStore.getState().refresh();
         setData(null);
         return;
       }
