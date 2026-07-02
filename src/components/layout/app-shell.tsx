@@ -247,7 +247,7 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
               >
                 <Bell className="size-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 size-4 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold animate-pulse-glow">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold animate-pulse-glow ring-2 ring-background shadow-sm">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}

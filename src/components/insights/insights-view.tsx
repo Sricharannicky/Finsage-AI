@@ -49,16 +49,32 @@ interface HealthData {
   metrics: { savingsRate: number; totalIncome: number; totalExpense: number; remainingBalance: number; monthlyBudget: number; goalsCount: number };
 }
 
+interface AnomalyData {
+  anomalies: {
+    type: "high_amount" | "frequency_spike" | "new_category" | "unusual_timing";
+    severity: "warning" | "danger" | "info";
+    transaction: { id: string; category: string; amount: number; date: string; note: string | null };
+    reason: string;
+    expectedAmount?: number;
+    actualAmount: number;
+  }[];
+  summary: string;
+  stats: { total: number; danger: number; warning: number; info: number; totalAmount: number };
+  baselineCategories: number;
+}
+
 export function InsightsView() {
   const [tab, setTab] = useState("analysis");
   const [analysis, setAnalysis] = useState<SpendingAnalysis | null>(null);
   const [prediction, setPrediction] = useState<PredictionData | null>(null);
   const [weekly, setWeekly] = useState<WeeklyReport | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [anomaly, setAnomaly] = useState<AnomalyData | null>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [loadingPrediction, setLoadingPrediction] = useState(false);
   const [loadingWeekly, setLoadingWeekly] = useState(false);
   const [loadingHealth, setLoadingHealth] = useState(false);
+  const [loadingAnomaly, setLoadingAnomaly] = useState(false);
 
   useEffect(() => {
     loadHealth();
@@ -113,10 +129,23 @@ export function InsightsView() {
     }
   }
 
+  async function loadAnomaly() {
+    setLoadingAnomaly(true);
+    try {
+      const res = await api.get<AnomalyData>("/api/ai/anomaly");
+      setAnomaly(res);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load anomalies");
+    } finally {
+      setLoadingAnomaly(false);
+    }
+  }
+
   function onTabChange(v: string) {
     setTab(v);
     if (v === "prediction" && !prediction) loadPrediction();
     if (v === "weekly" && !weekly) loadWeekly();
+    if (v === "anomaly" && !anomaly) loadAnomaly();
   }
 
   return (
@@ -128,11 +157,12 @@ export function InsightsView() {
       />
 
       <Tabs value={tab} onValueChange={onTabChange}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto">
           <TabsTrigger value="analysis" className="gap-1.5 py-2 text-xs sm:text-sm"><Activity className="size-3.5" /> Analysis</TabsTrigger>
           <TabsTrigger value="prediction" className="gap-1.5 py-2 text-xs sm:text-sm"><Brain className="size-3.5" /> Predictions</TabsTrigger>
           <TabsTrigger value="weekly" className="gap-1.5 py-2 text-xs sm:text-sm"><Calendar className="size-3.5" /> Weekly Report</TabsTrigger>
           <TabsTrigger value="health" className="gap-1.5 py-2 text-xs sm:text-sm"><TrendingUp className="size-3.5" /> Health Score</TabsTrigger>
+          <TabsTrigger value="anomaly" className="gap-1.5 py-2 text-xs sm:text-sm"><AlertTriangle className="size-3.5" /> Anomalies</TabsTrigger>
         </TabsList>
 
         {/* Spending Analysis */}
@@ -420,6 +450,92 @@ export function InsightsView() {
                 <MetricCard label="Budget" value={formatCurrency(health.metrics.monthlyBudget)} />
                 <MetricCard label="Goals" value={health.metrics.goalsCount.toString()} />
               </div>
+            </>
+          ) : null}
+        </TabsContent>
+
+        {/* Anomaly Detection */}
+        <TabsContent value="anomaly" className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold flex items-center gap-2"><AlertTriangle className="size-4 text-rose-500" /> Spending Anomaly Detection</h3>
+              <p className="text-xs text-muted-foreground">Statistical analysis flags unusual transactions</p>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={loadAnomaly} disabled={loadingAnomaly}>
+              {loadingAnomaly ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />} Refresh
+            </Button>
+          </div>
+
+          {loadingAnomaly && !anomaly ? (
+            <Card className="shadow-sm"><CardContent className="py-12"><LoadingState message="Detecting anomalies..." /></CardContent></Card>
+          ) : anomaly ? (
+            <>
+              {/* Summary card */}
+              <Card className={`shadow-sm ${anomaly.stats.danger > 0 ? "border-rose-500/30 bg-rose-500/5" : anomaly.stats.warning > 0 ? "border-amber-500/30 bg-amber-500/5" : "border-emerald-500/30 bg-emerald-500/5"}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`size-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      anomaly.stats.danger > 0 ? "bg-rose-500/15" : anomaly.stats.warning > 0 ? "bg-amber-500/15" : "bg-emerald-500/15"
+                    }`}>
+                      {anomaly.stats.danger > 0 ? <AlertTriangle className="size-5 text-rose-500" /> : anomaly.stats.warning > 0 ? <AlertTriangle className="size-5 text-amber-500" /> : <CheckCircle2 className="size-5 text-emerald-500" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{anomaly.summary}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        {anomaly.stats.danger > 0 && <Badge variant="outline" className="text-[10px] py-0 bg-rose-500/10 text-rose-600 border-rose-500/20">{anomaly.stats.danger} critical</Badge>}
+                        {anomaly.stats.warning > 0 && <Badge variant="outline" className="text-[10px] py-0 bg-amber-500/10 text-amber-600 border-amber-500/20">{anomaly.stats.warning} warnings</Badge>}
+                        {anomaly.stats.info > 0 && <Badge variant="outline" className="text-[10px] py-0 bg-blue-500/10 text-blue-600 border-blue-500/20">{anomaly.stats.info} info</Badge>}
+                        <span className="text-xs text-muted-foreground">Baseline: {anomaly.baselineCategories} categories</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Anomaly list */}
+              {anomaly.anomalies.length > 0 ? (
+                <div className="space-y-2">
+                  {anomaly.anomalies.map((a, i) => {
+                    const config = {
+                      danger: { color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/5", border: "border-rose-500/20", icon: "🚨", label: "Critical" },
+                      warning: { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/5", border: "border-amber-500/20", icon: "⚠️", label: "Warning" },
+                      info: { color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/5", border: "border-blue-500/20", icon: "ℹ️", label: "Info" },
+                    }[a.severity];
+                    const typeLabel = { high_amount: "High Amount", frequency_spike: "Frequency Spike", new_category: "New Category", unusual_timing: "Unusual Timing" }[a.type];
+                    return (
+                      <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                        <Card className={`shadow-sm ${config.border} ${config.bg}`}>
+                          <CardContent className="p-3">
+                            <div className="flex items-start gap-3">
+                              <span className="text-xl flex-shrink-0">{config.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className={`text-[10px] py-0 ${config.color} ${config.border}`}>{config.label}</Badge>
+                                  <Badge variant="outline" className="text-[10px] py-0">{typeLabel}</Badge>
+                                  <span className="text-xs text-muted-foreground">{new Date(a.transaction.date).toLocaleDateString("en-IN")}</span>
+                                </div>
+                                <p className="text-sm font-medium">{getCategoryIcon(a.transaction.category)} {a.transaction.category} — {formatCurrency(a.actualAmount)}</p>
+                                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{a.reason}</p>
+                                {a.expectedAmount && (
+                                  <p className="text-[11px] text-muted-foreground mt-1">Expected: ~{formatCurrency(a.expectedAmount)} · Actual: {formatCurrency(a.actualAmount)}</p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="shadow-sm">
+                  <CardContent className="py-8 text-center">
+                    <CheckCircle2 className="size-10 mx-auto mb-2 text-emerald-500" />
+                    <p className="text-sm font-medium">No anomalies detected</p>
+                    <p className="text-xs text-muted-foreground mt-1">Your spending patterns look normal this month.</p>
+                  </CardContent>
+                </Card>
+              )}
             </>
           ) : null}
         </TabsContent>

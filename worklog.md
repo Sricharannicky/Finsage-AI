@@ -839,3 +839,67 @@ Added 1 new Prisma model:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 12 — Web Dev Review Round (Cron Trigger 2026-07-02 15:00)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 21 nav views navigate correctly
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+- Fixed: Anomaly API date query bug (Prisma expects Date objects, not strings)
+
+### New Features Added (Phase 12 — 1 major feature)
+
+**1. AI Spending Anomaly Detection** (new tab in AI Insights + API)
+- Statistical analysis flags unusual transactions using 3-month baseline
+- 4 detection types:
+  - **High Amount**: amount > avg + 2×std (and >1.5× avg)
+  - **Frequency Spike**: transaction count > 2× monthly average (min 5)
+  - **New Category**: category not seen in previous 3 months (min ₹1000)
+  - **Unusual Timing**: late-night spending (11pm-5am) over ₹500
+- Severity levels: Critical (danger) / Warning / Info
+- Summary card with severity counts + total flagged amount
+- Color-coded anomaly cards with reason, expected vs actual amount
+- Baseline built from 12 categories over 3 months
+- API: `GET /api/ai/anomaly`
+- Sample: 8 anomalies detected (1 warning, 7 info), ₹49.4K total flagged
+
+### Styling Improvements (Phase 12)
+- Enhanced notification badge: added ring-2 ring-background + shadow-sm for better visibility
+- Badge now uses min-w-4 + px-1 for better number fit (per VLM feedback)
+- Anomaly cards use severity-colored borders/backgrounds (rose/amber/blue)
+- Summary card changes color based on max severity (rose/amber/emerald)
+- AI Insights tabs grid updated from 4 to 5 columns for Anomalies tab
+
+### Bug Fixes (Phase 12)
+- **Anomaly API date query**: Fixed Prisma query that passed string dates instead of
+  Date objects. Replaced `getMonthsAgo() + "-01"` string concatenation with proper
+  `new Date(year, month-1, 1)` Date objects for gte/lt conditions.
+
+### New API Routes (1 added in Phase 12)
+- `GET /api/ai/anomaly` — Statistical anomaly detection with 4 detection types
+
+### Verification Results (Phase 12)
+- ✅ Anomaly API: 8 anomalies (1 warning, 7 info), 12 baseline categories, ₹49.4K flagged
+- ✅ All 21 views navigate without errors
+- ✅ VLM confirmed Anomaly Detection tab renders correctly
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1-12. ~~All previous features~~ ✅ DONE (Phases 3-11)
+13. ~~**AI anomaly detection**~~ ✅ DONE (Phase 12)
+14. **More ML models**: Add Random Forest approximation for category predictions
+15. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+16. **PWA / offline**: Service worker for offline transaction viewing
+17. **Email notifications**: Send budget-exceeded / goal-completion emails
+18. **Multi-user sharing**: Shared household budgets with role-based access
+19. **Bill auto-payment simulation**: Auto-deduct bills on due date
+20. **Debt payoff planner**: Snowball/avalanche strategy calculator
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)
