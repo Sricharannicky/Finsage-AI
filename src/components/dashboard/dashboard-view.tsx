@@ -246,8 +246,8 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
                     }}
                     formatter={(value: any) => formatCurrency(value)}
                   />
-                  <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2.5} fill="url(#incomeGrad)" name="Income" />
-                  <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={2.5} fill="url(#expenseGrad)" name="Expense" />
+                  <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={3} fill="url(#incomeGrad)" name="Income" />
+                  <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={3} fill="url(#expenseGrad)" name="Expense" />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>

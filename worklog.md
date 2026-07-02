@@ -579,3 +579,79 @@ Added 3 new Prisma models:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 8 — Web Dev Review Round (Cron Trigger 2026-07-02 14:15)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 18 nav views navigate correctly (added Challenges)
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+
+### New Features Added (Phase 8 — 1 major feature)
+
+**1. AI Savings Challenges** (new view + API + Prisma model)
+- Gamified savings challenges to build better money habits
+- 8 challenge templates: No-Spend Week, Cook at Home Week, Save 20%, No Coffee Month,
+  Audit Subscriptions, Pack Your Lunch, Walk & Save, 52-Week Challenge
+- Each challenge has: icon, target days, reward badge, description
+- Auto-tracks progress: completed days auto-increment based on elapsed days
+- Auto-completes when target reached + sends notification with reward badge
+- Manual "Day Done" button to increment progress
+- Abandon challenge with confirmation dialog
+- Stats: Active / Completed / Total Attempted / Badges Earned
+- Active challenges with progress bars + reward badges
+- Completed challenges shown as gold achievement cards
+- Available challenges with Start buttons
+- Model: `Challenge` (Prisma, unique on userId+type+status)
+- API: `GET/POST/PUT /api/challenges`
+- Sample: 2 challenges started (No-Spend Week + Cook at Home Week)
+
+### Styling Improvements (Phase 8)
+- Enhanced dashboard chart line thickness (2.5 → 3) for better contrast
+- Challenge cards use amber theme for active, emerald for completed
+- Progress bars with reward badges
+- Available challenges use violet hover accents
+- Consistent stat card design (gradient backgrounds with white text)
+
+### New API Routes (1 added in Phase 8)
+- `GET/POST/PUT /api/challenges` — Challenge CRUD + auto-progress tracking
+
+### New Components (1 added)
+- `src/components/challenges/challenges-view.tsx` — Savings challenges view
+
+### Database Schema Changes (Phase 8)
+Added 1 new Prisma model:
+- `Challenge` — savings challenges with type, target days, progress, status, reward
+
+### Verification Results (Phase 8)
+- ✅ Challenges API: 8 templates, 2 started, auto-progress working
+- ✅ All 18 views navigate without errors
+- ✅ VLM confirmed Challenges view renders correctly (active + available sections)
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1. ~~**PDF reports**~~ ✅ DONE (Phase 3)
+2. ~~**Investment tracking**~~ ✅ DONE (Phase 4)
+3. ~~**Net worth tracker**~~ ✅ DONE (Phase 5)
+4. ~~**AI investment insights**~~ ✅ DONE (Phase 5)
+5. ~~**Tax saving suggestions**~~ ✅ DONE (Phase 6)
+6. ~~**Goals timeline projection**~~ ✅ DONE (Phase 6)
+7. ~~**Smart budget AI**~~ ✅ DONE (Phase 7)
+8. ~~**Spending velocity widget**~~ ✅ DONE (Phase 7)
+9. ~~**Savings challenges**~~ ✅ DONE (Phase 8)
+10. **More ML models**: Add Random Forest approximation for category predictions
+11. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+12. **PWA / offline**: Service worker for offline transaction viewing
+13. **Email notifications**: Send budget-exceeded / goal-completion emails
+14. **Multi-user sharing**: Shared household budgets with role-based access
+15. **Bill auto-payment simulation**: Auto-deduct bills on due date
+16. **Currency conversion**: Live rates for multi-currency support
+17. **Financial benchmarking**: Compare your stats vs recommended ratios
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)

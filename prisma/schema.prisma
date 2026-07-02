@@ -32,6 +32,7 @@ model User {
   bills         Bill[]
   investments   Investment[]
   achievements  Achievement[]
+  challenges    Challenge[]
 }
 
 model Income {
@@ -199,4 +200,26 @@ model Achievement {
 
   @@unique([userId, type])
   @@index([userId])
+}
+
+model Challenge {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String // no_spend_week | cook_at_home | zero_waste_week | save_percentage | 52_week | no_coffee_month | etc
+  title       String
+  description String
+  icon        String
+  targetDays  Int
+  completedDays Int   @default(0)
+  status      String   @default("active") // active | completed | abandoned
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  reward      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, status])
+  @@index([userId, status])
 }
