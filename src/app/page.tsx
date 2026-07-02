@@ -16,6 +16,7 @@ import { CategoriesView } from "@/components/categories/categories-view";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { BillsView } from "@/components/bills/bills-view";
 import { RecurringView } from "@/components/recurring/recurring-view";
+import { DebtPayoffView } from "@/components/debt/debt-payoff-view";
 import { InvestmentsView } from "@/components/investments/investments-view";
 import { NetWorthView } from "@/components/networth/networth-view";
 import { TaxView } from "@/components/tax/tax-view";
@@ -71,6 +72,8 @@ export default function Home() {
         return <BillsView />;
       case "recurring":
         return <RecurringView />;
+      case "debt":
+        return <DebtPayoffView />;
       case "investments":
         return <InvestmentsView />;
       case "networth":

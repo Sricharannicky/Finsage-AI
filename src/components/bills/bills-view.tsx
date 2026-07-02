@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Receipt, Plus, Trash2, Pencil, CheckCircle2, Clock, AlertCircle, Calendar,
-  Zap, Loader2,
+  Zap, Loader2, Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export function BillsView() {
   const [editing, setEditing] = useState<Bill | undefined>();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [autoPaying, setAutoPaying] = useState(false);
 
   // form state
   const [name, setName] = useState("");
@@ -102,6 +103,23 @@ export function BillsView() {
     } catch (err: any) { toast.error(err.message); }
   }
 
+  async function handleAutoPayAll() {
+    setAutoPaying(true);
+    try {
+      const res = await api.post<{ success: boolean; paid: number; totalPaid: number; bills: string[] }>("/api/bills/autopay");
+      if (res.paid > 0) {
+        toast.success(`Auto-paid ${res.paid} bills totaling ${formatCurrency(res.totalPaid)}`);
+      } else {
+        toast.info("No bills due for auto-payment");
+      }
+      loadBills();
+    } catch (err: any) {
+      toast.error(err.message || "Auto-pay failed");
+    } finally {
+      setAutoPaying(false);
+    }
+  }
+
   async function handlePay(b: Bill) {
     setPayingId(b.id);
     try {
@@ -124,7 +142,17 @@ export function BillsView() {
         title="Bills & Subscriptions"
         subtitle="Track recurring bills and never miss a due date"
         icon={Receipt}
-        actions={<Button size="sm" className="gap-1.5 gradient-emerald text-white border-0" onClick={openAdd}><Plus className="size-3.5" /> Add Bill</Button>}
+        actions={
+          <>
+            {(stats?.overdueCount || 0) > 0 && (
+              <Button size="sm" variant="outline" className="gap-1.5 border-amber-500/30 hover:bg-amber-500/10" onClick={handleAutoPayAll} disabled={autoPaying}>
+                {autoPaying ? <Loader2 className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5 text-amber-500" />}
+                Auto-Pay All
+              </Button>
+            )}
+            <Button size="sm" className="gap-1.5 gradient-emerald text-white border-0" onClick={openAdd}><Plus className="size-3.5" /> Add Bill</Button>
+          </>
+        }
       />
 
       {/* Stat cards */}

@@ -903,3 +903,50 @@ Added 1 new Prisma model:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 13 — Continue to Build (2026-07-02)
+
+### New Features Added (2 major features)
+
+**1. Debt Payoff Planner** (new view + API)
+- Analyzes EMI/debt expenses and calculates snowball vs avalanche payoff strategies
+- Snowball: smallest balance first (psychological wins)
+- Avalanche: highest interest first (mathematically optimal, saves interest)
+- Interactive strategy comparison cards (click to select)
+- Payoff timeline line chart comparing both strategies
+- Extra payment scenario: shows impact of adding ₹2,000/month extra
+- Debt list with payoff order (numbered based on selected strategy)
+- Hero card: total debt, monthly payments, best strategy savings
+- Summary with personalized recommendation
+- API: `GET /api/ai/debt-payoff`
+- Sample: ₹3.47L total debt, 235 months standard → 51 months with ₹2K extra
+
+**2. Bill Auto-Payment Simulation** (API + button on Bills view)
+- `POST /api/bills/autopay` — processes all overdue bills at once
+- Creates expense records for each paid bill
+- Advances next due date per bill frequency
+- Sends notification with total paid and bill names
+- "Auto-Pay All" button on Bills view (appears when overdue bills exist)
+- Button shows loading spinner during processing
+
+### New API Routes (2 added)
+- `GET /api/ai/debt-payoff` — Debt payoff strategy calculator
+- `POST /api/bills/autopay` — Auto-pay all due/overdue bills
+
+### New Components (1 added)
+- `src/components/debt/debt-payoff-view.tsx` — Debt payoff planner view
+
+### Verification Results
+- ✅ Debt Payoff API: ₹3.47L debt, avalanche vs snowball, +₹2K saves 184 months
+- ✅ Bills Autopay API: processes overdue bills, creates expenses, advances dates
+- ✅ All 22 views navigate without errors
+- ✅ VLM confirmed Debt Payoff view renders correctly
+- ✅ ESLint clean
+
+### Current State
+- 22 fully-featured views
+- 42+ API endpoints
+- 9 Prisma models
+- Dev server alive on port 3000
