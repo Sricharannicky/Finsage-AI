@@ -13,6 +13,7 @@ import { GoalView } from "@/components/goals/goal-view";
 import { AdvisorView } from "@/components/ai/advisor-view";
 import { InsightsView } from "@/components/insights/insights-view";
 import { CategoriesView } from "@/components/categories/categories-view";
+import { CalendarView } from "@/components/calendar/calendar-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { SettingsView } from "@/components/settings/settings-view";
 import { Loader2 } from "lucide-react";
@@ -63,6 +64,8 @@ export default function Home() {
         return <InsightsView />;
       case "categories":
         return <CategoriesView />;
+      case "calendar":
+        return <CalendarView />;
       case "reports":
         return <ReportsView />;
       case "settings":

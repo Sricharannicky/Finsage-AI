@@ -7,7 +7,7 @@ import {
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import {
-  BarChart3, Download, FileText, TrendingUp, TrendingDown, Wallet, Calendar, Loader2,
+  BarChart3, Download, FileText, TrendingUp, TrendingDown, Wallet, Calendar, Loader2, FileDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,11 +59,18 @@ export function ReportsView() {
         subtitle="Visualize your financial trends over time"
         icon={BarChart3}
         actions={
-          <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <a href={`/api/export?type=all&month=${month}`} download>
-              <Download className="size-3.5" /> Export CSV
-            </a>
-          </Button>
+          <>
+            <Button variant="outline" size="sm" className="gap-1.5 border-rose-500/30 hover:bg-rose-500/10" asChild>
+              <a href={`/api/reports/pdf?month=${month}`} download>
+                <FileDown className="size-3.5 text-rose-500" /> PDF Report
+              </a>
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5" asChild>
+              <a href={`/api/export?type=all&month=${month}`} download>
+                <Download className="size-3.5" /> Export CSV
+              </a>
+            </Button>
+          </>
         }
       />
 

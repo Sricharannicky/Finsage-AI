@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, LayoutDashboard, ArrowDownCircle, ArrowUpCircle, PiggyBank, Target,
   Sparkles, BarChart3, Bot, Settings, Bell, Menu, X, LogOut, Sun, Moon,
-  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers,
+  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers, CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
 import { QuickAddFAB } from "@/components/shared/quick-add-fab";
+import { CommandPalette } from "@/components/shared/command-palette";
 import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api-client";
 import { formatRelativeTime } from "@/lib/constants";
@@ -30,6 +31,7 @@ export type ViewType =
   | "advisor"
   | "insights"
   | "categories"
+  | "calendar"
   | "reports"
   | "settings";
 
@@ -43,6 +45,7 @@ const NAV_ITEMS: { id: ViewType; label: string; icon: any; description: string }
   { id: "advisor", label: "AI Advisor", icon: Bot, description: "Chat with FinSage" },
   { id: "insights", label: "AI Insights", icon: Sparkles, description: "Analysis & predictions" },
   { id: "categories", label: "Categories", icon: Layers, description: "Category drill-down" },
+  { id: "calendar", label: "Calendar", icon: CalendarDays, description: "Spending heatmap" },
   { id: "reports", label: "Reports", icon: BarChart3, description: "Trends & export" },
   { id: "settings", label: "Settings", icon: Settings, description: "Profile & preferences" },
 ];
@@ -58,6 +61,7 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const user = useAuthStore((s) => s.user);
@@ -65,6 +69,18 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
   const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
+
+  // Cmd+K / Ctrl+K to open command palette
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   async function loadNotifications() {
     try {
@@ -176,19 +192,16 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)}>
               <Menu className="size-5" />
             </Button>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 max-w-md flex-1">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 max-w-md flex-1 hover:bg-muted transition-colors text-left"
+            >
               <Search className="size-4 text-muted-foreground" />
-              <input
-                placeholder="Search transactions, goals..."
-                className="bg-transparent outline-none text-sm flex-1 placeholder:text-muted-foreground"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const val = (e.target as HTMLInputElement).value;
-                    if (val) onViewChange("expenses");
-                  }
-                }}
-              />
-            </div>
+              <span className="text-sm text-muted-foreground flex-1">Search or jump to...</span>
+              <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border bg-background text-[10px] font-mono text-muted-foreground">
+                ⌘K
+              </kbd>
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -331,6 +344,9 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
 
       {/* Global Quick Add FAB */}
       <QuickAddFAB />
+
+      {/* Command Palette (Cmd+K) */}
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onNavigate={onViewChange} />
     </div>
   );
 }

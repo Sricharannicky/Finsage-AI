@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
   ArrowDownCircle, ArrowUpCircle, Wallet, PiggyBank, Sparkles, TrendingUp,
-  Target, Plus, Activity, Bot, ChevronRight, Lightbulb,
+  Target, Plus, Activity, Bot, ChevronRight, Lightbulb, FileDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,8 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState<string[]>([]);
   const [insightsLoading, setInsightsLoading] = useState(true);
+  const [coachTips, setCoachTips] = useState<{ id: string; type: "success" | "warning" | "info" | "danger"; icon: string; title: string; description: string; action?: string }[]>([]);
+  const [coachLoading, setCoachLoading] = useState(true);
 
   useEffect(() => {
     loadDashboard();
@@ -69,6 +71,12 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
         .then((r) => setInsights(r.insights))
         .catch(() => setInsights([]))
         .finally(() => setInsightsLoading(false));
+      // Load AI coach tips
+      setCoachLoading(true);
+      api.get<{ tips: any[] }>("/api/ai/coach")
+        .then((r) => setCoachTips(r.tips))
+        .catch(() => setCoachTips([]))
+        .finally(() => setCoachLoading(false));
     } catch (err: any) {
       console.error("Dashboard load error:", err);
     } finally {
@@ -95,9 +103,14 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">Your financial overview at a glance</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => onViewChange("expenses")} className="gap-1.5">
             <Plus className="size-3.5" /> Add Expense
+          </Button>
+          <Button variant="outline" size="sm" asChild className="gap-1.5 border-rose-500/30 hover:bg-rose-500/10">
+            <a href="/api/reports/pdf" download>
+              <FileDown className="size-3.5 text-rose-500" /> PDF
+            </a>
           </Button>
           <Button size="sm" onClick={() => onViewChange("advisor")} className="gap-1.5 gradient-emerald text-white border-0">
             <Bot className="size-3.5" /> Ask AI
@@ -149,7 +162,7 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
 
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow group">
-            <div className="absolute inset-0 gradient-teal opacity-95" />
+            <div className={`absolute inset-0 ${data.remainingBalance >= 0 ? "gradient-teal" : "gradient-rose"} opacity-95`} />
             <div className="absolute -right-4 -top-4 size-24 rounded-full bg-white/15 blur-2xl" />
             <CardContent className="relative p-4 lg:p-5 text-white">
               <div className="flex items-start justify-between">
@@ -379,6 +392,73 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
               <Button variant="outline" size="sm" className="w-full mt-2 gap-1.5 border-emerald-500/30 hover:bg-emerald-500/10" onClick={() => onViewChange("advisor")}>
                 <Bot className="size-3.5" /> Chat with AI Advisor
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* AI Coach proactive tips */}
+          <Card className="shadow-sm border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-transparent">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <div className="size-6 rounded-lg gradient-violet flex items-center justify-center">
+                  <Sparkles className="size-3.5 text-white" />
+                </div>
+                AI Coach
+              </CardTitle>
+              <CardDescription className="text-xs">Proactive tips from your spending patterns</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {coachLoading ? (
+                <div className="space-y-2">
+                  {[0, 1].map((i) => (
+                    <div key={i} className="flex gap-2 p-2.5 rounded-lg bg-card/50 border border-violet-500/10">
+                      <div className="size-4 rounded bg-muted animate-pulse flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 space-y-1">
+                        <div className="h-2.5 rounded bg-muted animate-pulse w-2/3" />
+                        <div className="h-2 rounded bg-muted animate-pulse w-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : coachTips.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-3 text-center">Add transactions to receive coaching tips</p>
+              ) : (
+                coachTips.slice(0, 3).map((tip, i) => {
+                  const config = {
+                    success: { bg: "bg-emerald-500/5", border: "border-emerald-500/15" },
+                    warning: { bg: "bg-amber-500/5", border: "border-amber-500/15" },
+                    danger: { bg: "bg-rose-500/5", border: "border-rose-500/15" },
+                    info: { bg: "bg-blue-500/5", border: "border-blue-500/15" },
+                  }[tip.type];
+                  return (
+                    <motion.div
+                      key={tip.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className={`flex gap-2 p-2.5 rounded-lg bg-card/50 border ${config.border}`}
+                    >
+                      <span className="text-base flex-shrink-0">{tip.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold leading-tight">{tip.title}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">{tip.description}</p>
+                        {tip.action && (
+                          <button
+                            onClick={() => {
+                              if (tip.action?.includes("goals")) onViewChange("goals");
+                              else if (tip.action?.includes("budget")) onViewChange("budgets");
+                              else if (tip.action?.includes("expense")) onViewChange("expenses");
+                              else if (tip.action?.includes("Advisor") || tip.action?.includes("insight")) onViewChange("advisor");
+                            }}
+                            className="text-[10px] text-violet-600 dark:text-violet-400 hover:underline mt-1"
+                          >
+                            {tip.action} →
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
             </CardContent>
           </Card>
 

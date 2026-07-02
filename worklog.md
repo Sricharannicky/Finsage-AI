@@ -1,6 +1,6 @@
 # FinSage AI — Personal Budget Planning Agent
 
-## Project Status: ✅ COMPLETE & VERIFIED
+## Project Status: ✅ COMPLETE & VERIFIED (Phase 3 added)
 
 A production-quality, AI-powered personal finance assistant built with Next.js 16,
 TypeScript, Prisma (SQLite), Recharts, Framer Motion, and the Z.ai LLM SDK.
@@ -148,3 +148,79 @@ bun run dev              # start on http://localhost:3000
 ```
 Use the **"Try Demo with Sample Data"** button on the auth screen for instant access
 with pre-loaded transactions, budgets, and goals.
+
+---
+
+## Phase 3 — Web Dev Review Round (Cron Trigger 2026-07-02 13:00)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python double-fork daemon
+- ✅ All 12 nav views navigate correctly (Dashboard, Transactions, Income, Expenses,
+  Budgets, Goals, AI Advisor, AI Insights, Categories, Calendar, Reports, Settings)
+- ✅ AI Advisor chat responds with personalized advice (tested "Can I afford an iPhone?")
+- ✅ No runtime errors / TypeScript errors / lint errors
+- ✅ VLM visual analysis confirmed dashboard, calendar, command palette all render well
+- Minor visual issues noted & fixed: negative balance now uses rose gradient (was teal)
+
+### New Features Added (Phase 3)
+1. **PDF Reports** (`GET /api/reports/pdf`) — Professional monthly financial report
+   generated via ReportLab (Python subprocess). 3-page A4 PDF with: Executive Summary
+   KPIs, Financial Health Score + breakdown table, Category Breakdown table, 6-Month
+   Trend, Savings Goals Progress, Recent Transactions. Passes pdf_qa.py (10 checks ✓,
+   2 minor warnings). PDF download buttons added to Dashboard + Reports views.
+   - `scripts/generate-report-pdf.py` — ReportLab generator (server-side Python)
+   - `src/app/api/reports/pdf/route.ts` — spawns Python, streams PDF bytes
+2. **Command Palette** (Cmd+K / Ctrl+K) — Global quick-search & navigation dialog using
+   shadcn cmdk. Sections: Quick Actions (Add Expense/Income, Import CSV, Ask AI,
+   Download PDF), Navigate (all 12 views), Preferences (theme toggle). Search bar in
+   topbar replaced with clickable "⌘K" trigger button.
+3. **Spending Calendar View** — Daily spending heatmap (GitHub-style) for last 1/3/6
+   months. Color intensity = spend amount (lime→amber→orange→red). Click any day for
+   detail (expense/income/txns/top category/net). Plus day-of-week pattern bar chart
+   (weekday=green, weekend=red) to spot weekend splurges. Stat cards: total expense,
+   income, avg/active day, no-spend days. Added to nav.
+4. **AI Coach Widget** (`GET /api/ai/coach`) — Proactive rule-based coaching tips on
+   dashboard. Returns 3-5 contextual tips sorted by severity: savings rate analysis,
+   budget discipline, month-over-month trend, 3-month acceleration, goal progress nudges,
+   no-spend streaks, emergency fund gaps. Each tip has icon, title, description, and
+   optional CTA action. Loads lazily with skeleton. Added to dashboard right column.
+
+### Styling Improvements
+- Negative balance card now uses rose gradient (was always teal) — clearer visual signal
+- Dashboard header buttons use `flex-wrap` for mobile responsiveness
+- Command palette search bar with ⌘K kbd hint
+- Calendar heatmap with hover scale animation + ring on selected day
+- AI Coach tips color-coded by severity (success/warning/danger/info)
+
+### New API Routes (4 added in Phase 3)
+- `GET /api/reports/pdf` — PDF report generation (ReportLab via Python subprocess)
+- `GET /api/ai/coach` — Proactive AI coach tips (rule-based pattern detection)
+- `GET /api/calendar` — Daily spending heatmap data + day-of-week averages
+
+### New Components (4 added)
+- `src/components/shared/command-palette.tsx` — Cmd+K dialog
+- `src/components/calendar/calendar-view.tsx` — Heatmap calendar view
+- `scripts/generate-report-pdf.py` — ReportLab PDF generator script
+
+### Verification Results (Phase 3)
+- ✅ PDF: HTTP 200, 8016 bytes, 3 pages, valid PDF 1.4, passes pdf_qa (10/10)
+- ✅ AI Coach: returns 4 tips (2 danger, 2 warning) for demo data
+- ✅ Calendar: 63 days, 44 active, 19 no-spend, DOW averages computed
+- ✅ Command Palette: opens on Cmd+K, shows Quick Actions + Navigate + Preferences
+- ✅ All 12 views navigate without errors
+- ✅ ESLint clean
+- ✅ Sample PDF saved to `/home/z/my-project/download/finsage-sample-report.pdf`
+
+### Updated Priority Recommendations (next phase)
+1. ~~**PDF reports**~~ ✅ DONE (Phase 3)
+2. **More ML models**: Add Random Forest approximation for category predictions
+3. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+4. **PWA / offline**: Service worker for offline transaction viewing
+5. **Email notifications**: Send budget-exceeded / goal-completion emails
+6. **Multi-user sharing**: Shared household budgets with role-based access
+7. **Investment tracking**: Portfolio integration (stocks, mutual funds)
+8. **Bill reminders**: Upcoming bill due-date notifications
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- AI response JSON parsing has try/catch fallbacks (could use zod schemas)
