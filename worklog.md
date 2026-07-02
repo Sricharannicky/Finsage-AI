@@ -500,3 +500,82 @@ Added 3 new Prisma models:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 7 — Web Dev Review Round (Cron Trigger 2026-07-02 14:00)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 17 nav views navigate correctly
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+
+### New Features Added (Phase 7 — 2 major features)
+
+**1. Smart Budget AI** (API + panel on Budgets view)
+- Dynamic budget reallocation suggestions based on 3-month spending patterns
+- Analyzes each budgeted category: current vs avg monthly spend, utilization %, trend
+- Status per category: Critical (>120%) / Over (>100%) / Under (<50%) / On Track
+- Reallocation suggestions: identifies surplus categories to fund deficit categories
+- Unbudgeted spending detection: categories with significant spend but no budget
+- Recommended budget per category (avg × 1.1 buffer)
+- Summary with stats (over/under/on-track counts)
+- API: `GET /api/ai/smart-budget`
+- Sample: 6 over budget, 1 under, 3 reallocations (Food→Shopping/Entertainment/Healthcare)
+
+**2. Spending Velocity Widget** (API + dashboard widget)
+- Daily average spend rate this month
+- Projected month-end total at current pace
+- Days elapsed / remaining in month
+- 14-day daily spending sparkline
+- Velocity ratio (actual vs expected pace, e.g. 19.26x)
+- Status: High / On Pace / Low with color-coded badges
+- Budget exceed warning if projected > budget
+- API: `GET /api/dashboard/velocity`
+- Sample: ₹29.6K/day avg, ₹9.18L projected, 19.26x pace, High status
+
+### Styling Improvements (Phase 7)
+- Standardized dashboard header buttons (uniform h-9 height, consistent outline style)
+- PDF button simplified (removed rose border, consistent with Add Expense)
+- Ask AI button enhanced with shadow-sm shadow-emerald-500/20
+- Smart Budget panel uses violet theme (consistent with other AI panels)
+- Velocity widget uses violet sparkline + status-colored badges
+- Budget health analysis grid uses status-colored backgrounds (rose/amber/blue/emerald)
+
+### New API Routes (2 added in Phase 7)
+- `GET /api/ai/smart-budget` — Budget reallocation analysis + recommendations
+- `GET /api/dashboard/velocity` — Daily spend rate + projection + 14-day series
+
+### New Components (1 added)
+- `src/components/dashboard/spending-velocity-widget.tsx` — Velocity widget
+- (Smart Budget panel integrated into existing budget-view.tsx)
+
+### Verification Results (Phase 7)
+- ✅ Smart Budget API: 6 over, 1 under, 3 reallocations, 3 unbudgeted categories
+- ✅ Velocity API: ₹29.6K/day, ₹9.18L projected, 19.26x pace, High status
+- ✅ All 17 views navigate without errors
+- ✅ VLM confirmed Smart Budget AI and Spending Velocity widget render correctly
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1. ~~**PDF reports**~~ ✅ DONE (Phase 3)
+2. ~~**Investment tracking**~~ ✅ DONE (Phase 4)
+3. ~~**Net worth tracker**~~ ✅ DONE (Phase 5)
+4. ~~**AI investment insights**~~ ✅ DONE (Phase 5)
+5. ~~**Tax saving suggestions**~~ ✅ DONE (Phase 6)
+6. ~~**Goals timeline projection**~~ ✅ DONE (Phase 6)
+7. ~~**Smart budget AI**~~ ✅ DONE (Phase 7)
+8. ~~**Spending velocity widget**~~ ✅ DONE (Phase 7)
+9. **More ML models**: Add Random Forest approximation for category predictions
+10. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+11. **PWA / offline**: Service worker for offline transaction viewing
+12. **Email notifications**: Send budget-exceeded / goal-completion emails
+13. **Multi-user sharing**: Shared household budgets with role-based access
+14. **Bill auto-payment simulation**: Auto-deduct bills on due date
+15. **Currency conversion**: Live rates for multi-currency support
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)

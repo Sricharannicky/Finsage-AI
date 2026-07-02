@@ -20,6 +20,7 @@ import { api } from "@/lib/api-client";
 import { formatCurrency, formatRelativeTime, getCategoryIcon } from "@/lib/constants";
 import { LoadingState, StatCardSkeleton, CardSkeleton, ListSkeleton } from "@/components/shared";
 import { MonthComparisonWidget } from "@/components/dashboard/month-comparison-widget";
+import { SpendingVelocityWidget } from "@/components/dashboard/spending-velocity-widget";
 import { NetWorthSparkline } from "@/components/dashboard/networth-sparkline";
 import type { ViewType } from "@/components/layout/app-shell";
 
@@ -105,15 +106,15 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
           <p className="text-sm text-muted-foreground mt-0.5">Your financial overview at a glance</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => onViewChange("expenses")} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => onViewChange("expenses")} className="gap-1.5 h-9">
             <Plus className="size-3.5" /> Add Expense
           </Button>
-          <Button variant="outline" size="sm" asChild className="gap-1.5 border-rose-500/30 hover:bg-rose-500/10">
+          <Button variant="outline" size="sm" asChild className="gap-1.5 h-9">
             <a href="/api/reports/pdf" download>
-              <FileDown className="size-3.5 text-rose-500" /> PDF
+              <FileDown className="size-3.5" /> PDF
             </a>
           </Button>
-          <Button size="sm" onClick={() => onViewChange("advisor")} className="gap-1.5 gradient-emerald text-white border-0">
+          <Button size="sm" onClick={() => onViewChange("advisor")} className="gap-1.5 gradient-emerald text-white border-0 h-9 shadow-sm shadow-emerald-500/20">
             <Bot className="size-3.5" /> Ask AI
           </Button>
         </div>
@@ -315,6 +316,9 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
 
           {/* Month-over-month comparison widget */}
           <MonthComparisonWidget />
+
+          {/* Spending velocity widget */}
+          <SpendingVelocityWidget />
         </div>
 
         {/* Right col - health, AI, goals */}

@@ -25,12 +25,22 @@ interface BudgetWithSpent extends Budget {
   pct: number;
 }
 
+interface SmartBudgetData {
+  summary: string;
+  analysis: { category: string; currentBudget: number; spent: number; remaining: number; utilization: number; avgMonthly: number; trend: number; status: string; recommendedBudget: number; difference: number; action: string }[];
+  reallocations: { from: string; to: string; amount: number; reason: string }[];
+  unbudgeted: { category: string; amount: number; avgMonthly: number }[];
+  stats: { totalBudget: number; totalSpent: number; overCount: number; underCount: number; onTrackCount: number; potentialSavings: number };
+}
+
 export function BudgetView() {
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{ suggestions: { category: string; amount: number; reason: string }[]; total: number; explanation: string } | null>(null);
+  const [smartBudget, setSmartBudget] = useState<SmartBudgetData | null>(null);
+  const [smartLoading, setSmartLoading] = useState(true);
 
   const [newCategory, setNewCategory] = useState("");
   const [newAmount, setNewAmount] = useState("");
@@ -54,6 +64,12 @@ export function BudgetView() {
         return { ...b, spent: s, remaining: b.amount - s, pct: b.amount > 0 ? (s / b.amount) * 100 : 0 };
       });
       setBudgets(withSpent);
+      // Load smart budget analysis lazily
+      setSmartLoading(true);
+      api.get<SmartBudgetData>("/api/ai/smart-budget")
+        .then(setSmartBudget)
+        .catch(() => setSmartBudget(null))
+        .finally(() => setSmartLoading(false));
     } catch (err: any) {
       toast.error(err.message || "Failed to load budgets");
     } finally {
@@ -224,6 +240,91 @@ export function BudgetView() {
             </CardContent>
           </Card>
         </motion.div>
+      )}
+
+      {/* Smart Budget AI panel */}
+      {smartLoading ? (
+        <Card className="shadow-sm border-violet-500/20">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Analyzing spending patterns...
+            </div>
+          </CardContent>
+        </Card>
+      ) : smartBudget && (
+        <Card className="shadow-sm border-violet-500/20 bg-gradient-to-br from-violet-500/5 to-transparent">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <div className="size-6 rounded-lg gradient-violet flex items-center justify-center">
+                <Sparkles className="size-3.5 text-white" />
+              </div>
+              Smart Budget AI
+            </CardTitle>
+            <CardDescription className="text-xs">{smartBudget.summary}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {/* Reallocation suggestions */}
+            {smartBudget.reallocations.length > 0 && (
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Recommended Reallocations</p>
+                <div className="space-y-1.5">
+                  {smartBudget.reallocations.map((r, i) => (
+                    <div key={i} className="flex items-center gap-2 p-2.5 rounded-lg bg-card/50 border border-violet-500/10">
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <Badge variant="outline" className="text-[10px] py-0 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">{r.from}</Badge>
+                        <span className="text-muted-foreground text-xs">→</span>
+                        <Badge variant="outline" className="text-[10px] py-0 bg-rose-500/10 text-rose-600 border-rose-500/20">{r.to}</Badge>
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums">{formatCurrency(r.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Category analysis grid */}
+            {smartBudget.analysis.length > 0 && (
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Budget Health Analysis</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {smartBudget.analysis.slice(0, 6).map((a, i) => {
+                    const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
+                      "critical": { color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10", label: "Critical" },
+                      "over": { color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", label: "Over" },
+                      "under": { color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10", label: "Under" },
+                      "on-track": { color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", label: "On Track" },
+                    };
+                    const cfg = statusConfig[a.status] || statusConfig["on-track"];
+                    return (
+                      <div key={i} className={`flex items-center gap-2 p-2 rounded-lg border ${cfg.bg} border-violet-500/10`}>
+                        <span className="text-sm flex-shrink-0">{getCategoryIcon(a.category)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{a.category}</p>
+                          <p className="text-[10px] text-muted-foreground">{a.utilization}% used · avg {formatCurrency(a.avgMonthly)}/mo</p>
+                        </div>
+                        <Badge variant="outline" className={`text-[9px] py-0 ${cfg.color}`}>{cfg.label}</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Unbudgeted categories */}
+            {smartBudget.unbudgeted.length > 0 && (
+              <div className="pt-2 border-t border-violet-500/10">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Unbudgeted Spending (consider setting budgets)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {smartBudget.unbudgeted.map((u, i) => (
+                    <Badge key={i} variant="outline" className="text-[10px] py-1 bg-card/50">
+                      {getCategoryIcon(u.category)} {u.category}: {formatCurrency(u.amount)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Budget list */}
