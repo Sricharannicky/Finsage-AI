@@ -30,14 +30,21 @@ import { SettingsView } from "@/components/settings/settings-view";
 import { Loader2 } from "lucide-react";
 
 export default function Home() {
-  const { user, hydrated, refresh } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const refresh = useAuthStore((s) => s.refresh);
   const [activeView, setActiveView] = useState<ViewType>("dashboard");
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     // Always verify session with server before rendering app
-    refresh().finally(() => setAuthChecked(true));
-  }, [refresh]);
+    // Use a ref to prevent re-runs from Zustand function identity changes
+    let cancelled = false;
+    refresh().finally(() => {
+      if (!cancelled) setAuthChecked(true);
+    });
+    return () => { cancelled = true; };
+  }, []); // Run once on mount only
 
   // Show loading screen until auth is verified with server
   if (!authChecked || !hydrated) {
