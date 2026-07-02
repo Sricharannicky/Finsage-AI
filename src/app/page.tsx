@@ -23,6 +23,7 @@ import { TaxView } from "@/components/tax/tax-view";
 import { ChallengesView } from "@/components/challenges/challenges-view";
 import { BenchmarkView } from "@/components/benchmark/benchmark-view";
 import { CurrencyView } from "@/components/currency/currency-view";
+import { ScenarioView } from "@/components/scenario/scenario-view";
 import { AchievementsView } from "@/components/achievements/achievements-view";
 import { ReportsView } from "@/components/reports/reports-view";
 import { SettingsView } from "@/components/settings/settings-view";
@@ -88,6 +89,8 @@ export default function Home() {
         return <BenchmarkView />;
       case "currency":
         return <CurrencyView />;
+      case "scenario":
+        return <ScenarioView />;
       case "advisor":
         return <AdvisorView />;
       case "insights":
