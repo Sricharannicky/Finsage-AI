@@ -717,3 +717,67 @@ Added 1 new Prisma model:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 10 — Web Dev Review Round (Cron Trigger 2026-07-02 14:45)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 20 nav views navigate correctly (added Currency)
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+
+### New Features Added (Phase 10 — 2 major features)
+
+**1. Multi-Currency Converter** (new view + API)
+- 10 currencies supported: INR, USD, EUR, GBP, JPY, AUD, CAD, SGD, AED, CNY
+- Interactive converter: From/To selectors with swap button, amount input, live result
+- Exchange rate display: 1 FROM = X TO with formatted conversion
+- All rates table: every currency's rate relative to selected "From" currency
+- Auto-detects user's currency from profile
+- API: `GET /api/currency` (returns rates + symbols + names)
+- Helper functions: `convertFromINR()`, `formatInCurrency()` for future integration
+
+**2. Dashboard Financial Tips Ticker** (widget on dashboard)
+- Rotating carousel of 16 smart financial tips
+- Auto-rotates every 8 seconds with smooth animation transitions
+- Each tip has: icon, text, and optional "Learn →" link to relevant view
+- Dismissible (X button) — hidden for session
+- Amber→violet gradient background for visual distinction
+- Tips cover: savings, emergency fund, budgeting, investments, taxes, challenges, etc.
+
+### Styling Improvements (Phase 10)
+- Enhanced dashboard chart colors: brighter emerald (#34d399) and rose (#fb7185) for better contrast
+- Increased gradient opacity (0.4 → 0.5) for more vivid area fills
+- Tips ticker uses amber-violet gradient with animated transitions
+- Currency converter result uses emerald highlight box for emphasis
+- Currency rate cards highlight selected "To" currency with emerald border
+
+### New API Routes (1 added in Phase 10)
+- `GET /api/currency` — Exchange rates for 10 currencies + symbols + names
+
+### New Components (2 added)
+- `src/components/currency/currency-view.tsx` — Multi-currency converter view
+- `src/components/dashboard/tips-ticker.tsx` — Rotating financial tips widget
+
+### Verification Results (Phase 10)
+- ✅ Currency API: 10 currencies, rates + symbols returned
+- ✅ All 20 views navigate without errors
+- ✅ VLM confirmed Currency Converter and Tips Ticker render correctly
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1-10. ~~All previous features~~ ✅ DONE (Phases 3-9)
+11. ~~**Currency conversion**~~ ✅ DONE (Phase 10)
+12. **More ML models**: Add Random Forest approximation for category predictions
+13. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+14. **PWA / offline**: Service worker for offline transaction viewing
+15. **Email notifications**: Send budget-exceeded / goal-completion emails
+16. **Multi-user sharing**: Shared household budgets with role-based access
+17. **Bill auto-payment simulation**: Auto-deduct bills on due date
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)

@@ -22,6 +22,7 @@ import { LoadingState, StatCardSkeleton, CardSkeleton, ListSkeleton } from "@/co
 import { MonthComparisonWidget } from "@/components/dashboard/month-comparison-widget";
 import { SpendingVelocityWidget } from "@/components/dashboard/spending-velocity-widget";
 import { NetWorthSparkline } from "@/components/dashboard/networth-sparkline";
+import { TipsTicker } from "@/components/dashboard/tips-ticker";
 import type { ViewType } from "@/components/layout/app-shell";
 
 interface DashboardData {
@@ -119,6 +120,9 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
           </Button>
         </div>
       </div>
+
+      {/* Financial Tips Ticker */}
+      <TipsTicker onViewChange={onViewChange} />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
@@ -226,12 +230,12 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
                 <AreaChart data={data.incomeTrend} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#34d399" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#fb7185" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="#fb7185" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -246,8 +250,8 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
                     }}
                     formatter={(value: any) => formatCurrency(value)}
                   />
-                  <Area type="monotone" dataKey="income" stroke="#10b981" strokeWidth={3} fill="url(#incomeGrad)" name="Income" />
-                  <Area type="monotone" dataKey="expense" stroke="#f43f5e" strokeWidth={3} fill="url(#expenseGrad)" name="Expense" />
+                  <Area type="monotone" dataKey="income" stroke="#34d399" strokeWidth={3} fill="url(#incomeGrad)" name="Income" />
+                  <Area type="monotone" dataKey="expense" stroke="#fb7185" strokeWidth={3} fill="url(#expenseGrad)" name="Expense" />
                 </AreaChart>
               </ResponsiveContainer>
             </CardContent>

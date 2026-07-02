@@ -9,7 +9,7 @@ import {
 import {
   LayoutDashboard, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, PiggyBank, Target,
   Bot, Sparkles, Layers, BarChart3, Settings, Moon, Sun, Plus, FileDown, Upload,
-  TrendingUp, Home, CalendarDays, Receipt, Trophy, Wallet, Landmark, Flame, Activity,
+  TrendingUp, Home, CalendarDays, Receipt, Trophy, Wallet, Landmark, Flame, Activity, Globe,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ViewType } from "@/components/layout/app-shell";
@@ -37,6 +37,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate, onQuickAdd }: C
     { id: "tax", label: "Tax Advisor", icon: Landmark, desc: "Section 80C/80D savings" },
     { id: "challenges", label: "Savings Challenges", icon: Flame, desc: "Gamified money habits" },
     { id: "benchmark", label: "Benchmark", icon: Activity, desc: "Compare to standards" },
+    { id: "currency", label: "Currency Converter", icon: Globe, desc: "Multi-currency rates" },
     { id: "advisor", label: "AI Advisor", icon: Bot, desc: "Chat with FinSage" },
     { id: "insights", label: "AI Insights", icon: Sparkles, desc: "Analysis & predictions" },
     { id: "categories", label: "Categories", icon: Layers, desc: "Category analytics" },
