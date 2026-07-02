@@ -173,7 +173,7 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
             <CardContent className="relative p-4 lg:p-5 text-white">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[10px] lg:text-xs font-medium text-white/80 uppercase tracking-wider">Balance</p>
+                  <p className="text-[10px] lg:text-xs font-medium text-white/80 uppercase tracking-wider">Balance {data.remainingBalance < 0 && "⚠️"}</p>
                   <p className="text-xl lg:text-2xl font-bold mt-1 tracking-tight">{formatCurrency(data.remainingBalance)}</p>
                 </div>
                 <div className="size-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">

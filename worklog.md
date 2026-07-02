@@ -781,3 +781,61 @@ Added 1 new Prisma model:
 ### Tech debt (unchanged)
 - Some `any` types in API route bodies (lint disabled)
 - Dev server needs restart after Prisma schema changes (documented in QA)
+
+---
+
+## Phase 11 — Web Dev Review Round (Cron Trigger 2026-07-02 14:56)
+
+### QA Assessment Performed
+- ✅ Dev server alive (HTTP 200) via persistent Python daemon
+- ✅ All 21 nav views navigate correctly (added Recurring)
+- ✅ AI Advisor chat, FAB, command palette all working
+- ✅ No runtime errors / lint errors
+- ✅ VLM visual analysis confirmed proper rendering
+
+### New Features Added (Phase 11 — 1 major feature)
+
+**1. Recurring Transaction Scheduler** (new view + API)
+- Lists all recurring income & expenses in one place (deduplicated by category+source)
+- Shows next occurrence date for each item (computed from last date + 1 month)
+- Status badges: "Today" / "Xd" (upcoming within 7 days) / "Overdue"
+- Toggle switch to enable/disable recurring status per item
+- 4 stat cards: Monthly Income, Monthly Expense, Net Recurring, Due This Week
+- Sorted by next occurrence date (soonest first)
+- API: `GET /api/recurring-list` (list + stats), `PUT /api/recurring-list` (toggle recurring)
+- Sample: 6 recurring items (1 income + 5 expenses), ₹21.4K net monthly recurring
+
+### Styling Improvements (Phase 11)
+- Added ⚠️ emoji to Balance card label when negative (per VLM feedback)
+- Shortened all 16 tips ticker messages for better visibility (per VLM feedback)
+- Recurring view uses consistent gradient stat cards (emerald/rose/teal/violet)
+- Status badges color-coded (amber for upcoming, rose for overdue)
+- Toggle switches for easy recurring status management
+
+### New API Routes (1 added in Phase 11)
+- `GET /api/recurring-list` — List all recurring transactions with next occurrence + stats
+- `PUT /api/recurring-list` — Toggle recurring status of a transaction
+
+### New Components (1 added)
+- `src/components/recurring/recurring-view.tsx` — Recurring transaction scheduler view
+
+### Verification Results (Phase 11)
+- ✅ Recurring API: 6 items, ₹56.4K income, ₹35K expense, ₹21.4K net recurring
+- ✅ All 21 views navigate without errors
+- ✅ VLM confirmed Recurring view renders correctly (stat cards, list, toggles)
+- ✅ ESLint clean
+
+### Updated Priority Recommendations (next phase)
+1-11. ~~All previous features~~ ✅ DONE (Phases 3-10)
+12. ~~**Recurring transaction scheduler**~~ ✅ DONE (Phase 11)
+13. **More ML models**: Add Random Forest approximation for category predictions
+14. **Notifications scheduling**: Cron-based weekly report + monthly summary generation
+15. **PWA / offline**: Service worker for offline transaction viewing
+16. **Email notifications**: Send budget-exceeded / goal-completion emails
+17. **Multi-user sharing**: Shared household budgets with role-based access
+18. **Bill auto-payment simulation**: Auto-deduct bills on due date
+19. **AI-powered spending anomaly detection**: Flag unusual transactions
+
+### Tech debt (unchanged)
+- Some `any` types in API route bodies (lint disabled)
+- Dev server needs restart after Prisma schema changes (documented in QA)

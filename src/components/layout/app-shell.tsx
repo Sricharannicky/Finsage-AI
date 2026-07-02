@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, LayoutDashboard, ArrowDownCircle, ArrowUpCircle, PiggyBank, Target,
   Sparkles, BarChart3, Bot, Settings, Bell, Menu, X, LogOut, Sun, Moon,
-  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers, CalendarDays, Receipt, TrendingUp as TrendingUpIcon, Trophy, Wallet, Landmark, Flame, Activity, Globe,
+  Search, ChevronDown, CheckCheck, TrendingUp, AlertTriangle, Info, CheckCircle2, Trash2, ArrowLeftRight, Layers, CalendarDays, Receipt, TrendingUp as TrendingUpIcon, Trophy, Wallet, Landmark, Flame, Activity, Globe, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -29,6 +29,7 @@ export type ViewType =
   | "budgets"
   | "goals"
   | "bills"
+  | "recurring"
   | "investments"
   | "networth"
   | "tax"
@@ -51,6 +52,7 @@ const NAV_ITEMS: { id: ViewType; label: string; icon: any; description: string }
   { id: "budgets", label: "Budgets", icon: PiggyBank, description: "Plan spending" },
   { id: "goals", label: "Goals", icon: Target, description: "Savings targets" },
   { id: "bills", label: "Bills", icon: Receipt, description: "Reminders & due dates" },
+  { id: "recurring", label: "Recurring", icon: RefreshCw, description: "Scheduled transactions" },
   { id: "investments", label: "Investments", icon: TrendingUpIcon, description: "Portfolio tracker" },
   { id: "networth", label: "Net Worth", icon: Wallet, description: "Complete financial picture" },
   { id: "tax", label: "Tax Advisor", icon: Landmark, description: "Section 80C/80D savings" },

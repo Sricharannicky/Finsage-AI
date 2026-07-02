@@ -14,22 +14,22 @@ interface Tip {
 }
 
 const TIPS: Tip[] = [
-  { icon: "💡", text: "Aim to save at least 20% of your income each month for long-term financial stability.", view: "insights" },
-  { icon: "🛡️", text: "Build an emergency fund covering 3-6 months of expenses before investing aggressively.", view: "goals" },
-  { icon: "📊", text: "Track every expense for a month — you'll be surprised where your money goes.", view: "expenses" },
-  { icon: "🎯", text: "Set SMART financial goals: Specific, Measurable, Achievable, Relevant, Time-bound.", view: "goals" },
-  { icon: "💸", text: "Pay yourself first: automate savings transfers on payday before spending.", view: "budgets" },
-  { icon: "📉", text: "Review your subscriptions monthly — cancel anything you haven't used in 30 days.", view: "bills" },
-  { icon: "🏦", text: "Start a SIP (Systematic Investment Plan) — even ₹1000/month compounds significantly over time.", view: "investments" },
-  { icon: "⚖️", text: "Follow the 50/30/20 rule: 50% needs, 30% wants, 20% savings & debt repayment.", view: "benchmark" },
-  { icon: "🚫", text: "Avoid impulse purchases — wait 48 hours before buying anything over ₹2000.", view: "challenges" },
-  { icon: "📈", text: "Diversify investments across asset classes to reduce risk and improve returns.", view: "investments" },
-  { icon: "💳", text: "Keep credit utilization below 30% to maintain a healthy credit score.", view: "benchmark" },
-  { icon: "🏆", text: "Take on savings challenges to build better money habits gamified!", view: "challenges" },
-  { icon: "💰", text: "Increase your savings rate by 1% every 3 months — small steps lead to big results.", view: "insights" },
-  { icon: "📋", text: "Review your budget weekly, not monthly — catch overspending early.", view: "budgets" },
-  { icon: "🌍", text: "Invest in tax-saving instruments under Section 80C to maximize returns.", view: "tax" },
-  { icon: "⚡", text: "Monitor your spending velocity — know your daily burn rate before it's too late.", view: "dashboard" },
+  { icon: "💡", text: "Aim to save at least 20% of your income monthly.", view: "insights" },
+  { icon: "🛡️", text: "Build an emergency fund covering 3-6 months of expenses.", view: "goals" },
+  { icon: "📊", text: "Track every expense for a month — find hidden spending.", view: "expenses" },
+  { icon: "🎯", text: "Set SMART financial goals with clear deadlines.", view: "goals" },
+  { icon: "💸", text: "Pay yourself first: automate savings on payday.", view: "budgets" },
+  { icon: "📉", text: "Cancel subscriptions you haven't used in 30 days.", view: "bills" },
+  { icon: "🏦", text: "Start a SIP — ₹1000/month compounds over time.", view: "investments" },
+  { icon: "⚖️", text: "Follow the 50/30/20 rule: needs, wants, savings.", view: "benchmark" },
+  { icon: "🚫", text: "Wait 48 hours before impulse purchases over ₹2000.", view: "challenges" },
+  { icon: "📈", text: "Diversify investments to reduce risk.", view: "investments" },
+  { icon: "💳", text: "Keep credit utilization below 30% for good credit score.", view: "benchmark" },
+  { icon: "🏆", text: "Take savings challenges to build money habits!", view: "challenges" },
+  { icon: "💰", text: "Increase savings rate by 1% every 3 months.", view: "insights" },
+  { icon: "📋", text: "Review your budget weekly — catch overspending early.", view: "budgets" },
+  { icon: "🌍", text: "Use Section 80C investments to save on taxes.", view: "tax" },
+  { icon: "⚡", text: "Monitor your spending velocity daily.", view: "dashboard" },
 ];
 
 export function TipsTicker({ onViewChange }: { onViewChange: (v: ViewType) => void }) {

@@ -9,7 +9,7 @@ import {
 import {
   LayoutDashboard, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, PiggyBank, Target,
   Bot, Sparkles, Layers, BarChart3, Settings, Moon, Sun, Plus, FileDown, Upload,
-  TrendingUp, Home, CalendarDays, Receipt, Trophy, Wallet, Landmark, Flame, Activity, Globe,
+  TrendingUp, Home, CalendarDays, Receipt, Trophy, Wallet, Landmark, Flame, Activity, Globe, RefreshCw,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { ViewType } from "@/components/layout/app-shell";
@@ -32,6 +32,7 @@ export function CommandPalette({ open, onOpenChange, onNavigate, onQuickAdd }: C
     { id: "budgets", label: "Budgets", icon: PiggyBank, desc: "Plan spending" },
     { id: "goals", label: "Savings Goals", icon: Target, desc: "Track targets" },
     { id: "bills", label: "Bills & Subscriptions", icon: Receipt, desc: "Due date reminders" },
+    { id: "recurring", label: "Recurring Transactions", icon: RefreshCw, desc: "Scheduled items" },
     { id: "investments", label: "Investments", icon: TrendingUp, desc: "Portfolio tracker" },
     { id: "networth", label: "Net Worth", icon: Wallet, desc: "Complete financial picture" },
     { id: "tax", label: "Tax Advisor", icon: Landmark, desc: "Section 80C/80D savings" },
