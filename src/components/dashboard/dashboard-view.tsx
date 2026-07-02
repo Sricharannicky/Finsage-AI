@@ -23,6 +23,8 @@ import { MonthComparisonWidget } from "@/components/dashboard/month-comparison-w
 import { SpendingVelocityWidget } from "@/components/dashboard/spending-velocity-widget";
 import { NetWorthSparkline } from "@/components/dashboard/networth-sparkline";
 import { TipsTicker } from "@/components/dashboard/tips-ticker";
+import { HealthRadarWidget } from "@/components/dashboard/health-radar-widget";
+import { SavingsRateWidget } from "@/components/dashboard/savings-rate-widget";
 import type { ViewType } from "@/components/layout/app-shell";
 
 interface DashboardData {
@@ -323,6 +325,9 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
 
           {/* Spending velocity widget */}
           <SpendingVelocityWidget />
+
+          {/* Savings Rate tracker */}
+          <SavingsRateWidget />
         </div>
 
         {/* Right col - health, AI, goals */}
@@ -363,6 +368,9 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
               </Button>
             </CardContent>
           </Card>
+
+          {/* Health Radar Chart */}
+          <HealthRadarWidget />
 
           {/* AI Suggestions */}
           <Card className="shadow-sm border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
