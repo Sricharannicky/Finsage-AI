@@ -36,7 +36,12 @@ async function request<T>(
     const message =
       (data && typeof data === "object" && data.error) ||
       `Request failed with status ${res.status}`;
-    throw new ApiError(message, res.status);
+    const error = new ApiError(message, res.status);
+    // Suppress 401 errors from showing as uncaught in console — they're handled by components
+    if (res.status === 401) {
+      // Silent — components handle 401 gracefully
+    }
+    throw error;
   }
 
   return data as T;

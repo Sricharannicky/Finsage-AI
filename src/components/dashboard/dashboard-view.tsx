@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
   ArrowDownCircle, ArrowUpCircle, Wallet, PiggyBank, Sparkles, TrendingUp,
-  Target, Plus, Activity, Bot, ChevronRight, Lightbulb, FileDown,
+  Target, Plus, Activity, Bot, ChevronRight, Lightbulb, FileDown, AlertCircle, RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,13 +85,34 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
         .finally(() => setCoachLoading(false));
     } catch (err: any) {
       console.error("Dashboard load error:", err);
+      // If 401 Unauthorized, the session expired — refresh auth state
+      if (err?.status === 401) {
+        const { refresh } = await import("@/lib/auth-store");
+        await refresh();
+        // If still no user after refresh, the page will redirect to auth
+      }
+      // Set empty data so we show a friendly message instead of "Failed to load"
+      setData(null);
     } finally {
       setLoading(false);
     }
   }
 
   if (loading) return <DashboardSkeleton />;
-  if (!data) return <div className="text-center py-16 text-muted-foreground">Failed to load dashboard</div>;
+  if (!data) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <div className="size-14 rounded-2xl bg-rose-500/10 flex items-center justify-center">
+        <AlertCircle className="size-7 text-rose-500" />
+      </div>
+      <div className="text-center">
+        <p className="font-semibold text-base">Unable to load dashboard</p>
+        <p className="text-sm text-muted-foreground mt-1">Your session may have expired. Try refreshing the page.</p>
+      </div>
+      <Button onClick={() => window.location.reload()} className="gap-1.5 gradient-emerald text-white border-0">
+        <RefreshCw className="size-4" /> Reload Page
+      </Button>
+    </div>
+  );
 
   const budgetUsed = data.monthlyBudget > 0 ? (data.totalExpense / data.monthlyBudget) * 100 : 0;
   const monthLabel = new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });

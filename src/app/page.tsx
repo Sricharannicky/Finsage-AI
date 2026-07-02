@@ -31,13 +31,15 @@ import { Loader2 } from "lucide-react";
 export default function Home() {
   const { user, hydrated, refresh } = useAuthStore();
   const [activeView, setActiveView] = useState<ViewType>("dashboard");
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    refresh();
+    // Always verify session with server before rendering app
+    refresh().finally(() => setAuthChecked(true));
   }, [refresh]);
 
-  // Show loading screen until hydration completes
-  if (!hydrated) {
+  // Show loading screen until auth is verified with server
+  if (!authChecked || !hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
