@@ -106,7 +106,8 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
 
   async function loadNotifications() {
     try {
-      const res = await api.get<{ notifications: Notification[] }>("/api/notifications");
+      const res = await api.get<{ notifications: Notification[] } | null>("/api/notifications");
+      if (!res) return; // 401 — session expired, skip silently
       setNotifications(res.notifications);
       setUnreadCount(res.notifications.filter((n) => !n.read).length);
     } catch {}

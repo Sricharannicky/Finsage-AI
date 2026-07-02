@@ -9,6 +9,52 @@ export class ApiError extends Error {
   }
 }
 
+// URLs that should silently return null on 401 (background polling, lazy widgets, etc.)
+// These are called from components with .catch() or optional chaining, so null is safe
+const SILENT_401_URLS = [
+  "/api/notifications",
+  "/api/recurring",
+  "/api/achievements",
+  "/api/ai/coach",
+  "/api/ai/cached-insights",
+  "/api/dashboard/velocity",
+  "/api/dashboard/savings-rate",
+  "/api/dashboard/comparison",
+  "/api/dashboard/summary",
+  "/api/ai/health-score",
+  "/api/ai/anomaly",
+  "/api/ai/investment-insights",
+  "/api/ai/smart-budget",
+  "/api/ai/benchmark",
+  "/api/ai/scenario",
+  "/api/ai/debt-payoff",
+  "/api/ai/tax-suggestions",
+  "/api/ai/budget-suggestion",
+  "/api/ai/weekly-report",
+  "/api/ai/analysis",
+  "/api/ai/prediction",
+  "/api/ai/insights",
+  "/api/goals/projection",
+  "/api/calendar",
+  "/api/categories",
+  "/api/recurring-list",
+  "/api/networth",
+  "/api/currency",
+  "/api/bills",
+  "/api/investments",
+  "/api/challenges",
+  "/api/income",
+  "/api/expenses",
+  "/api/budgets",
+  "/api/goals",
+  "/api/reports",
+  "/api/settings",
+];
+
+function isSilent401(url: string, status: number): boolean {
+  return status === 401 && SILENT_401_URLS.some((u) => url.startsWith(u));
+}
+
 async function request<T>(
   url: string,
   options: RequestInit = {}
@@ -36,12 +82,15 @@ async function request<T>(
     const message =
       (data && typeof data === "object" && data.error) ||
       `Request failed with status ${res.status}`;
-    const error = new ApiError(message, res.status);
-    // Suppress 401 errors from showing as uncaught in console — they're handled by components
-    if (res.status === 401) {
-      // Silent — components handle 401 gracefully
+
+    // For 401 on background/polling URLs, return null silently (no throw, no console error)
+    // Components handle null gracefully with optional chaining and default values
+    if (isSilent401(url, res.status)) {
+      return null as T;
     }
-    throw error;
+
+    // For critical 401s (dashboard summary, auth), throw so components can handle
+    throw new ApiError(message, res.status);
   }
 
   return data as T;

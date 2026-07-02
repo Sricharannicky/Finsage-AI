@@ -69,29 +69,29 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
   async function loadDashboard() {
     setLoading(true);
     try {
-      const res = await api.get<DashboardData>("/api/dashboard/summary");
+      const res = await api.get<DashboardData | null>("/api/dashboard/summary");
+      if (!res) {
+        // 401 — session expired, refresh auth (will redirect to login if needed)
+        const { refresh } = await import("@/lib/auth-store");
+        await refresh();
+        setData(null);
+        return;
+      }
       setData(res);
       // Load AI insights lazily AFTER dashboard renders
       setInsightsLoading(true);
-      api.get<{ insights: string[] }>("/api/ai/cached-insights")
-        .then((r) => setInsights(r.insights))
+      api.get<{ insights: string[] } | null>("/api/ai/cached-insights")
+        .then((r) => setInsights(r?.insights || []))
         .catch(() => setInsights([]))
         .finally(() => setInsightsLoading(false));
       // Load AI coach tips
       setCoachLoading(true);
-      api.get<{ tips: any[] }>("/api/ai/coach")
-        .then((r) => setCoachTips(r.tips))
+      api.get<{ tips: any[] } | null>("/api/ai/coach")
+        .then((r) => setCoachTips(r?.tips || []))
         .catch(() => setCoachTips([]))
         .finally(() => setCoachLoading(false));
     } catch (err: any) {
       console.error("Dashboard load error:", err);
-      // If 401 Unauthorized, the session expired — refresh auth state
-      if (err?.status === 401) {
-        const { refresh } = await import("@/lib/auth-store");
-        await refresh();
-        // If still no user after refresh, the page will redirect to auth
-      }
-      // Set empty data so we show a friendly message instead of "Failed to load"
       setData(null);
     } finally {
       setLoading(false);
