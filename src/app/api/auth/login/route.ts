@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Login error:", err);
-    return NextResponse.json({ error: "Login failed. Please try again." }, { status: 500 });
+    const errorMsg = err?.message || "An unexpected error occurred";
+    return NextResponse.json({ error: `Login failed: ${errorMsg}` }, { status: 500 });
   }
 }
