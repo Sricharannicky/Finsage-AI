@@ -10,30 +10,13 @@ export class ApiError extends Error {
 }
 
 // URLs that should silently return null on 401 (background polling, lazy widgets, etc.)
-// These are called from components with .catch() or optional chaining, so null is safe
+// Auth endpoints (/api/auth/login, /api/auth/register, /api/auth/me) are NOT here
 const SILENT_401_URLS = [
   "/api/notifications",
   "/api/recurring",
   "/api/achievements",
-  "/api/ai/coach",
-  "/api/ai/cached-insights",
-  "/api/dashboard/velocity",
-  "/api/dashboard/savings-rate",
-  "/api/dashboard/comparison",
-  "/api/dashboard/summary",
-  "/api/ai/health-score",
-  "/api/ai/anomaly",
-  "/api/ai/investment-insights",
-  "/api/ai/smart-budget",
-  "/api/ai/benchmark",
-  "/api/ai/scenario",
-  "/api/ai/debt-payoff",
-  "/api/ai/tax-suggestions",
-  "/api/ai/budget-suggestion",
-  "/api/ai/weekly-report",
-  "/api/ai/analysis",
-  "/api/ai/prediction",
-  "/api/ai/insights",
+  "/api/ai/",
+  "/api/dashboard/",
   "/api/goals/projection",
   "/api/calendar",
   "/api/categories",
@@ -55,16 +38,36 @@ function isSilent401(url: string, status: number): boolean {
   return status === 401 && SILENT_401_URLS.some((u) => url.startsWith(u));
 }
 
+// Get token from localStorage (set by auth-store persist)
+function getToken(): string | null {
+  try {
+    const stored = localStorage.getItem("finsage-auth");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed?.state?.token || null;
+    }
+  } catch {}
+  return null;
+}
+
 async function request<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  // Add token from localStorage as fallback (in case cookies don't work through proxy)
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    headers,
     credentials: "include",
   });
 
@@ -83,13 +86,10 @@ async function request<T>(
       (data && typeof data === "object" && data.error) ||
       `Request failed with status ${res.status}`;
 
-    // For 401 on background/polling URLs, return null silently (no throw, no console error)
-    // Components handle null gracefully with optional chaining and default values
     if (isSilent401(url, res.status)) {
       return null as T;
     }
 
-    // For critical 401s (dashboard summary, auth), throw so components can handle
     throw new ApiError(message, res.status);
   }
 

@@ -18,6 +18,7 @@ export function AuthView() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const setUser = useAuthStore((s) => s.setUser);
+  const setToken = (token: string) => useAuthStore.setState({ token });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +26,8 @@ export function AuthView() {
     try {
       const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
       const body = mode === "login" ? { email, password } : { name, email, password };
-      const res = await api.post<{ user: any; error?: string }>(endpoint, body);
+      const res = await api.post<{ user: any; token?: string; error?: string }>(endpoint, body);
+      if (res?.token) setToken(res.token);
       setUser(res.user);
       toast.success(mode === "login" ? "Welcome back!" : "Account created successfully!");
     } catch (err: any) {
@@ -39,19 +41,21 @@ export function AuthView() {
     setLoading(true);
     try {
       try {
-        const res = await api.post<{ user: any }>("/api/auth/login", {
+        const res = await api.post<{ user: any; token?: string }>("/api/auth/login", {
           email: "demo@finsage.ai",
           password: "demo1234",
         });
+        if (res?.token) setToken(res.token);
         setUser(res.user);
         toast.success("Welcome to the FinSage demo!");
       } catch (e: any) {
         if (e instanceof ApiError && e.status === 404) {
-          const res = await api.post<{ user: any }>("/api/auth/register", {
+          const res = await api.post<{ user: any; token?: string }>("/api/auth/register", {
             name: "Demo User",
             email: "demo@finsage.ai",
             password: "demo1234",
           });
+          if (res?.token) setToken(res.token);
           setUser(res.user);
           try {
             await api.post("/api/seed");

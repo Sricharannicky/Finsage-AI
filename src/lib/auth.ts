@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 
@@ -49,9 +49,25 @@ export async function verifySession(
   }
 }
 
-export async function getSessionUser() {
+// Get token from cookie OR Authorization header (fallback for proxy environments)
+async function getTokenFromRequest(): Promise<string | null> {
+  // Try cookie first
   const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE_NAME)?.value;
+  const cookieToken = cookieStore.get(COOKIE_NAME)?.value;
+  if (cookieToken) return cookieToken;
+
+  // Fallback: try Authorization header (Bearer token from localStorage)
+  const headerStore = await headers();
+  const authHeader = headerStore.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.substring(7);
+  }
+
+  return null;
+}
+
+export async function getSessionUser() {
+  const token = await getTokenFromRequest();
   if (!token) return null;
 
   const payload = await verifySession(token);
