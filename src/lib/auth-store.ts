@@ -21,7 +21,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       loading: false,
       hydrated: false,
-      setUser: (user) => set({ user }),
+      setUser: (user) => set({ user, hydrated: true }),
       setLoading: (loading) => set({ loading }),
       logout: async () => {
         try {
@@ -32,11 +32,28 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null });
       },
       refresh: async () => {
+        // Don't override user if it was just set by login
+        // Only set user from server response if we don't already have one
+        // or if the server says we have no session
         try {
           const res = await api.get<{ user: AuthUser | null }>("/api/auth/me");
-          set({ user: res.user, hydrated: true });
+          if (res?.user) {
+            set({ user: res.user, hydrated: true });
+          } else if (!get().user) {
+            // Only clear user if we don't already have one (from login)
+            set({ user: null, hydrated: true });
+          } else {
+            // We have a user from login but server says no session
+            // Keep the user — the cookie might just not be set yet
+            set({ hydrated: true });
+          }
         } catch {
-          set({ user: null, hydrated: true });
+          // Only clear on error if we don't have a user
+          if (!get().user) {
+            set({ user: null, hydrated: true });
+          } else {
+            set({ hydrated: true });
+          }
         }
       },
     }),

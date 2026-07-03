@@ -34,20 +34,15 @@ export default function Home() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const refresh = useAuthStore((s) => s.refresh);
   const [activeView, setActiveView] = useState<ViewType>("dashboard");
-  const [authChecked, setAuthChecked] = useState(false);
+  const [serverChecked, setServerChecked] = useState(false);
 
+  // Check auth with server ONCE on mount
   useEffect(() => {
-    // Always verify session with server before rendering app
-    // Use a ref to prevent re-runs from Zustand function identity changes
-    let cancelled = false;
-    refresh().finally(() => {
-      if (!cancelled) setAuthChecked(true);
-    });
-    return () => { cancelled = true; };
-  }, []); // Run once on mount only
+    refresh().finally(() => setServerChecked(true));
+  }, [refresh]);
 
-  // Show loading screen until auth is verified with server
-  if (!authChecked || !hydrated) {
+  // Show loading until we've checked with the server
+  if (!serverChecked || !hydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -60,10 +55,12 @@ export default function Home() {
     );
   }
 
+  // If no user after server check, show login
   if (!user) {
     return <AuthView />;
   }
 
+  // User is logged in — render the app
   const renderView = () => {
     switch (activeView) {
       case "dashboard":
