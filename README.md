@@ -228,7 +228,7 @@ npm run dev
 
 **Live Application**
 
-> https:https://6a475fd5aace21a9a6bb4fed--finsagepro.netlify.app
+> https:https://r13k25r237q1-deploy.space-z.ai/
 
 ---
 
