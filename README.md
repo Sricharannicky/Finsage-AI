@@ -11,7 +11,7 @@ Manage your finances smarter with AI-driven insights, expense tracking, budgetin
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma)](https://www.prisma.io/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 
 </div>
 
@@ -228,7 +228,7 @@ npm run dev
 
 **Live Application**
 
-> https://YOUR-LIVE-DEMO-LINK
+> https:https://r13k25r237q1-deploy.space-z.ai/
 
 ---
 
@@ -247,13 +247,11 @@ GitHub:
 https://github.com/Sricharannicky
 
 LinkedIn:
-(Add your LinkedIn URL)
+(https://www.linkedin.com/in/sricharan-s-y-7557172a0/)
 
 ---
 
-# 📄 License
 
-This project is licensed under the MIT License.
 
 ---
 
