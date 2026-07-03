@@ -33,7 +33,16 @@ export function AuthView() {
         throw new Error("Invalid response from server");
       }
     } catch (err: any) {
-      toast.error(err.message || "Authentication failed");
+      // Show the actual server error message (e.g. "An account with this email already exists")
+      const msg = err?.message || "Authentication failed";
+      toast.error(msg);
+      // If email already exists, suggest switching to login
+      if (msg.includes("already exists") && mode === "register") {
+        setTimeout(() => {
+          toast.info("Switching to Sign In — please use your password to log in.", { duration: 5000 });
+          setMode("login");
+        }, 1500);
+      }
     } finally {
       setLoading(false);
     }
