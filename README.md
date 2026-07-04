@@ -228,7 +228,7 @@ npm run dev
 
 **Live Application**
 
-> https:https://r13k25r237q1-deploy.space-z.ai/
+> https:https://r13k25r237q1-deploy.space-z.ai
 
 ---
 
