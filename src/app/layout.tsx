@@ -30,6 +30,7 @@ export const metadata: Metadata = {
   authors: [{ name: "FinSage AI" }],
   icons: {
     icon: "/logo.svg",
+    apple: "/apple-touch-icon.png",
   },
 };
 
