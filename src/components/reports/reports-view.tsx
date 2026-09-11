@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader, LoadingState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { formatCurrency, getCategoryColor, getCategoryIcon } from "@/lib/constants";
-import { getCurrentMonthKey } from "@/lib/finance";
+import { getCurrentMonthKey } from "@/lib/finance-utils";
 import { toast } from "sonner";
 
 interface ReportData {

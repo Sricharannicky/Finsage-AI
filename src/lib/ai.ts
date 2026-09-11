@@ -1,4 +1,4 @@
-import ZAI from "z-ai-web-dev-sdk";
+import { getAIClient } from "./ai-adapter";
 import { db } from "./db";
 import {
   getUserFinancialData,
@@ -15,13 +15,24 @@ import {
   predictCategoryExpenses,
 } from "./prediction";
 
-let zaiInstance: any = null;
+let aiInstance: any = null;
 
-async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create();
+async function getAI() {
+  if (!aiInstance) {
+    try {
+      aiInstance = await getAIClient();
+    } catch (err: any) {
+      console.warn("getAIClient() failed, using stub:", err?.message || err);
+      aiInstance = {
+        chat: {
+          completions: {
+            create: async (opts: any) => ({ choices: [{ message: { content: "AI engine not configured. Add GROQ_API_KEY to .env to enable AI features." } }] }),
+          },
+        },
+      };
+    }
   }
-  return zaiInstance;
+  return aiInstance;
 }
 
 // Build a comprehensive financial context string for the AI
@@ -109,7 +120,7 @@ export async function chatWithAdvisor(
   userMessage: string,
   conversationHistory: { role: string; content: string }[] = []
 ): Promise<string> {
-  const zai = await getZAI();
+  const ai = await getAI();
   const context = await buildFinancialContext(userId);
 
   const systemPrompt = `You are FinSage, an expert AI personal financial advisor integrated into a budgeting app.
@@ -132,7 +143,7 @@ ${context}
 Respond to the user's question below with personalized advice based on this context.`;
 
   const messages: { role: string; content: string }[] = [
-    { role: "assistant", content: systemPrompt },
+    { role: "system", content: systemPrompt },
     ...conversationHistory.slice(-8).map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
       content: m.content,
@@ -141,9 +152,8 @@ Respond to the user's question below with personalized advice based on this cont
   ];
 
   try {
-    const completion = await zai.chat.completions.create({
+    const completion = await ai.chat.completions.create({
       messages,
-      thinking: { type: "disabled" },
     });
     return completion.choices[0]?.message?.content || "I couldn't generate a response. Please try again.";
   } catch (err: any) {
@@ -187,7 +197,7 @@ export async function generateSpendingAnalysis(userId: string): Promise<{
     }
   }
 
-  const zai = await getZAI();
+  const ai = await getAI();
   const prompt = `Analyze this month's spending data and produce a JSON response.
 
 CURRENT MONTH (${monthKey}): total expense ${data.totalExpense}, income ${data.totalIncome}, savings rate ${data.savingsRate.toFixed(1)}%
@@ -213,12 +223,11 @@ Respond with STRICT JSON only (no markdown, no explanation) in this exact format
 Provide 4-6 insights. Include both positive and negative findings.`;
 
   try {
-    const completion = await zai.chat.completions.create({
+    const completion = await ai.chat.completions.create({
       messages: [
-        { role: "assistant", content: "You are a financial data analyst. Respond only with valid JSON, no extra text." },
+        { role: "system", content: "You are a financial data analyst. Respond only with valid JSON, no extra text." },
         { role: "user", content: prompt },
       ],
-      thinking: { type: "disabled" },
     });
     const raw = completion.choices[0]?.message?.content || "{}";
     // Extract JSON from response
@@ -278,7 +287,7 @@ export async function suggestBudgetAllocation(userId: string): Promise<{
   }
 
   const totalIncome = (data.totalIncome + prevData.totalIncome + prevPrevData.totalIncome) / 3 || data.totalIncome;
-  const zai = await getZAI();
+  const ai = await getAI();
 
   const prompt = `Recommend a monthly budget allocation as JSON.
 
@@ -300,12 +309,11 @@ Respond with STRICT JSON only:
 Cover the main expense categories. Total budget should be ~80% of income (leaving 20% for savings).`;
 
   try {
-    const completion = await zai.chat.completions.create({
+    const completion = await ai.chat.completions.create({
       messages: [
-        { role: "assistant", content: "You are a financial planner. Respond only with valid JSON." },
+        { role: "system", content: "You are a financial planner. Respond only with valid JSON." },
         { role: "user", content: prompt },
       ],
-      thinking: { type: "disabled" },
     });
     const raw = completion.choices[0]?.message?.content || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -371,7 +379,7 @@ export async function generateWeeklyReport(userId: string): Promise<{
   const prevWeekExpense = prevWeekExpenses.reduce((s, e) => s + e.amount, 0);
 
   const expensePredictions = await predictCategoryExpenses(userId, 4);
-  const zai = await getZAI();
+  const ai = await getAI();
 
   const prompt = `Generate a weekly financial report as JSON.
 
@@ -408,12 +416,11 @@ Respond with STRICT JSON only:
 Each array should have 2-4 items, specific to the data above.`;
 
   try {
-    const completion = await zai.chat.completions.create({
+    const completion = await ai.chat.completions.create({
       messages: [
-        { role: "assistant", content: "You are a financial coach generating a weekly report. Respond only with valid JSON." },
+        { role: "system", content: "You are a financial coach generating a weekly report. Respond only with valid JSON." },
         { role: "user", content: prompt },
       ],
-      thinking: { type: "disabled" },
     });
     const raw = completion.choices[0]?.message?.content || "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);

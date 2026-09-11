@@ -16,7 +16,7 @@ import { PageHeader, LoadingState, EmptyState } from "@/components/shared";
 import { TransactionDialog } from "@/components/shared/transaction-dialog";
 import { api } from "@/lib/api-client";
 import { EXPENSE_CATEGORIES, formatCurrency, formatDate, getCategoryColor, getCategoryIcon } from "@/lib/constants";
-import { getCurrentMonthKey } from "@/lib/finance";
+import { getCurrentMonthKey } from "@/lib/finance-utils";
 import { toast } from "sonner";
 import type { Expense, ExpenseCategory } from "@/lib/types";
 import { CsvImportDialog } from "@/components/shared/csv-import-dialog";

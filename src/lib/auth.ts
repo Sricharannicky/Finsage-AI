@@ -73,21 +73,27 @@ export async function getSessionUser() {
   const payload = await verifySession(token);
   if (!payload) return null;
 
-  const user = await db.user.findUnique({
-    where: { id: payload.userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      avatar: true,
-      currency: true,
-      monthlyIncomeGoal: true,
-      savingsTarget: true,
-      createdAt: true,
-    },
-  });
+  try {
+    const user = await db.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatar: true,
+        currency: true,
+        monthlyIncomeGoal: true,
+        savingsTarget: true,
+        createdAt: true,
+      },
+    });
 
-  return user;
+    return user;
+  } catch (err: any) {
+    // e.g. Firebase not configured yet — treat as logged out instead of crashing
+    console.error("[auth] getSessionUser db error:", err?.message || err);
+    return null;
+  }
 }
 
 export async function setSessionCookie(token: string) {

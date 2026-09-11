@@ -15,7 +15,7 @@ import { PageHeader, LoadingState, EmptyState } from "@/components/shared";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { api } from "@/lib/api-client";
 import { formatCurrency, formatDate, getCategoryIcon } from "@/lib/constants";
-import { getCurrentMonthKey } from "@/lib/finance";
+import { getCurrentMonthKey } from "@/lib/finance-utils";
 import type { Income, Expense } from "@/lib/types";
 import type { ViewType } from "@/components/layout/app-shell";
 

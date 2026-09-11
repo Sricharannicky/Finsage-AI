@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/shared";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api-client";
-import { getCurrentMonthKey } from "@/lib/finance";
+import { getCurrentMonthKey } from "@/lib/finance-utils";
 import { toast } from "sonner";
 
 export function SettingsView() {
@@ -250,7 +250,7 @@ export function SettingsView() {
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                 FinSage AI is your personal budget planning agent. It combines secure transaction tracking, AI-powered financial advice,
                 ML-based expense predictions, and a real-time financial health score to help you make smarter money decisions.
-                Built with Next.js, Prisma, Recharts, and the Z.ai LLM.
+                Built with Next.js, Firebase, Recharts, and Groq AI.
               </p>
             </div>
           </div>

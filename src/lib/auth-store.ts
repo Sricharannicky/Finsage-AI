@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AuthUser } from "./types";
-import { api } from "./api-client";
+import { api, ApiError } from "./api-client";
 
 interface AuthState {
   user: AuthUser | null;
@@ -45,8 +45,13 @@ export const useAuthStore = create<AuthState>()(
           } else {
             set({ hydrated: true });
           }
-        } catch {
-          if (!get().user) {
+        } catch (err) {
+          // Stale/invalid token (e.g. JWT secret rotated or user deleted):
+          // drop the persisted session so the user lands on login
+          // instead of a stuck "session expired" dashboard.
+          if (err instanceof ApiError && err.status === 401) {
+            set({ user: null, token: null, hydrated: true });
+          } else if (!get().user) {
             set({ user: null, token: null, hydrated: true });
           } else {
             set({ hydrated: true });

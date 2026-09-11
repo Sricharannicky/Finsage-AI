@@ -362,7 +362,7 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
         </main>
 
         <footer className="mt-auto border-t py-4 px-6 text-center text-xs text-muted-foreground">
-          <p>FinSage AI · Personal Budget Planning Agent · Built with Next.js, Prisma & Z.ai LLM</p>
+          <p>FinSage AI · Personal Budget Planning Agent · Built with Next.js, Firebase & Groq AI</p>
         </footer>
       </div>
 
