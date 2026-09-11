@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Eye, EyeOff, Loader2, Mail, Lock, User, Sparkles, TrendingUp, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/lib/auth-store";
 import { api, ApiError } from "@/lib/api-client";
-import { isGoogleLoginConfigured, signInWithGoogle } from "@/lib/firebase-client";
+import {
+  isGoogleLoginConfigured,
+  signInWithGoogle,
+  signInWithGoogleRedirect,
+  consumeGoogleRedirect,
+  isPopupBlockedError,
+} from "@/lib/firebase-client";
 import { toast } from "sonner";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -75,23 +81,61 @@ export function AuthView() {
     }
   };
 
+  const exchangeGoogleToken = async (idToken: string) => {
+    const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken });
+    if (res?.user && res?.token) {
+      setAuth(res.user, res.token);
+      toast.success("Signed in with Google!");
+    } else {
+      throw new Error("Invalid response from server");
+    }
+  };
+
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
       const idToken = await signInWithGoogle();
-      const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken });
-      if (res?.user && res?.token) {
-        setAuth(res.user, res.token);
-        toast.success("Signed in with Google!");
-      } else {
-        throw new Error("Invalid response from server");
-      }
+      await exchangeGoogleToken(idToken);
     } catch (err: any) {
-      toast.error(err?.message || "Google sign-in failed");
+      // Browser blocked the popup (common with strict popup blockers):
+      // fall back to full-page redirect, which always works.
+      if (isPopupBlockedError(err)) {
+        toast.info("Popup blocked — redirecting to Google instead…");
+        try {
+          await signInWithGoogleRedirect();
+          return;
+        } catch (redirectErr: any) {
+          toast.error(redirectErr?.message || "Google sign-in failed");
+        }
+      } else {
+        toast.error(err?.message || "Google sign-in failed");
+      }
     } finally {
       setGoogleLoading(false);
     }
   };
+
+  // Complete a redirect-based Google sign-in when returning from Google.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const idToken = await consumeGoogleRedirect();
+        if (idToken && !cancelled) {
+          setGoogleLoading(true);
+          await exchangeGoogleToken(idToken);
+        }
+      } catch (err: any) {
+        if (!cancelled) toast.error(err?.message || "Google sign-in failed");
+      } finally {
+        if (!cancelled) setGoogleLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();

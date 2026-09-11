@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminApp } from "@/lib/firebase";
-import { getAuth } from "firebase-admin/auth";
 import { db } from "@/lib/db";
 import { createSession, setSessionCookie } from "@/lib/auth";
 
@@ -25,6 +24,9 @@ export async function POST(req: NextRequest) {
 
     let decoded: { email?: string; name?: string; picture?: string; uid: string };
     try {
+      // Lazy-load auth submodule inside try/catch so bundling/runtime
+      // issues surface as JSON errors, never an HTML 500 page.
+      const { getAuth } = await import("firebase-admin/auth");
       decoded = await getAuth(app).verifyIdToken(parsed.data.idToken);
     } catch {
       return NextResponse.json({ error: "Google sign-in expired. Please try again." }, { status: 401 });
