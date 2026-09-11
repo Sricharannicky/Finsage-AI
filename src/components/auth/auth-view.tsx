@@ -8,16 +8,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/lib/auth-store";
 import { api, ApiError } from "@/lib/api-client";
+import { isGoogleLoginConfigured, signInWithGoogle } from "@/lib/firebase-client";
 import { toast } from "sonner";
 
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.5 12.3c0-.9-.1-1.5-.3-2.3H12v4.5h6.5c-.1 1.1-.8 2.7-2.4 3.8l-.1.1 3.5 2.7.2.1c2.2-2 3.8-5 3.8-8.9z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.8-2.9c-1 .7-2.4 1.2-4.1 1.2-3.2 0-5.9-2.1-6.8-5l-.1.1-3.6 2.8v.1C3.5 21.3 7.5 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.2 14.4c-.2-.7-.4-1.5-.4-2.4s.1-1.7.4-2.4l-.1-.1-3.5-2.7-.1.1C.5 8.9 0 10.4 0 12s.5 3.1 1.5 4.5l3.7-2.1z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.6c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.5 0 3.5 2.7 1.5 6.9l3.7 2.9c.9-2.9 3.6-5.2 6.8-5.2z"
+      />
+    </svg>
+  );
+}
+
 export function AuthView() {
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
+  const googleReady = isGoogleLoginConfigured();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +75,37 @@ export function AuthView() {
     }
   };
 
+  const handleGoogle = async () => {
+    setGoogleLoading(true);
+    try {
+      const idToken = await signInWithGoogle();
+      const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken });
+      if (res?.user && res?.token) {
+        setAuth(res.user, res.token);
+        toast.success("Signed in with Google!");
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Google sign-in failed");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await api.post<{ message?: string }>("/api/auth/forgot", { email });
+      setForgotSent(true);
+      toast.success(res.message || "Reset link sent!");
+    } catch (err: any) {
+      toast.error(err?.message || "Request failed");
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleDemo = async () => {
     setLoading(true);
     try {
@@ -166,15 +224,69 @@ export function AuthView() {
           <div className="glass rounded-3xl p-8 shadow-2xl shadow-emerald-500/5">
             <div className="mb-8 text-center">
               <h2 className="text-2xl font-bold tracking-tight">
-                {mode === "login" ? "Welcome back" : "Create your account"}
+                {mode === "login" ? "Welcome back" : mode === "register" ? "Create your account" : "Reset password"}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {mode === "login"
                   ? "Sign in to continue managing your finances"
-                  : "Start your journey to financial freedom"}
+                  : mode === "register"
+                    ? "Start your journey to financial freedom"
+                    : "Enter your email and we'll send you a reset link"}
               </p>
             </div>
 
+            {mode === "forgot" ? (
+              forgotSent ? (
+                <div className="text-center py-4">
+                  <Mail className="size-10 text-emerald-500 mx-auto mb-3" />
+                  <p className="font-medium">Check your inbox</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    If an account exists for {email || "that email"}, a reset link is on its way (valid 1 hour).
+                  </p>
+                  <button
+                    onClick={() => {
+                      setMode("login");
+                      setForgotSent(false);
+                    }}
+                    className="mt-4 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    Back to sign in
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleForgot} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input
+                        id="forgot-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                        className="pl-10 h-11"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-11 gradient-emerald text-white border-0 hover:opacity-90 shadow-lg shadow-emerald-500/25"
+                  >
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : "Send reset link"}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("login")}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Back to sign in
+                  </button>
+                </form>
+              )
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <AnimatePresence mode="popLayout">
                 {mode === "register" && (
@@ -217,7 +329,21 @@ export function AuthView() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {mode === "login" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("forgot");
+                        setForgotSent(false);
+                      }}
+                      className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                   <Input
@@ -254,6 +380,7 @@ export function AuthView() {
                 )}
               </Button>
             </form>
+            )}
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
@@ -263,6 +390,22 @@ export function AuthView() {
                 <span className="bg-card px-3 text-muted-foreground">or</span>
               </div>
             </div>
+
+            {googleReady && (
+              <Button
+                onClick={handleGoogle}
+                disabled={loading || googleLoading}
+                variant="outline"
+                className="w-full h-11 mb-3"
+              >
+                {googleLoading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <GoogleIcon className="size-4" />
+                )}
+                Continue with Google
+              </Button>
+            )}
 
             <Button
               onClick={handleDemo}

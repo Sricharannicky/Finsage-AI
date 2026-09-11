@@ -273,3 +273,19 @@
   margin: 0.5rem 0;
   color: oklch(0.5 0.02 165);
 }
+
+/* Recharts tooltips — theme-aware text (fixes invisible black text in dark mode).
+   Recharts colors each tooltip item with the slice/series color, which is often
+   unreadable on dark backgrounds. Force foreground text in both themes. */
+.recharts-default-tooltip {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  color: var(--foreground) !important;
+}
+.recharts-tooltip-label {
+  color: var(--foreground) !important;
+}
+.recharts-tooltip-item {
+  color: var(--foreground) !important;
+}

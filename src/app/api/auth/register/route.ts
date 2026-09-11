@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
         name,
         email: email.toLowerCase(),
         passwordHash,
+        authProvider: "password",
       },
       select: { id: true, email: true, name: true },
     });

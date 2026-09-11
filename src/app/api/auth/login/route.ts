@@ -22,7 +22,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No account found with this email" }, { status: 404 });
     }
 
-    const valid = await verifyPassword(password, user.passwordHash);
+    if (!(user as any).passwordHash) {
+      return NextResponse.json(
+        { error: "This account uses Google sign-in. Please continue with Google." },
+        { status: 401 }
+      );
+    }
+
+    const valid = await verifyPassword(password, (user as any).passwordHash);
     if (!valid) {
       return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
     }

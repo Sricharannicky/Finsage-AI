@@ -316,7 +316,10 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
                           border: "1px solid var(--border)",
                           borderRadius: "12px",
                           fontSize: "12px",
+                          color: "var(--foreground)",
                         }}
+                        itemStyle={{ color: "var(--foreground)" }}
+                        labelStyle={{ color: "var(--foreground)" }}
                         formatter={(value: any) => formatCurrency(value)}
                       />
                     </PieChart>
