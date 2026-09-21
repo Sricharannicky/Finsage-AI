@@ -20,18 +20,17 @@ export const metadata: Metadata = {
   description:
     "AI-powered personal finance assistant. Track income, expenses, budgets, and savings with intelligent financial insights, predictive analytics, and an AI financial advisor.",
   keywords: [
-    "budget planner",
-    "AI finance",
-    "personal finance",
-    "expense tracker",
-    "financial advisor",
-    "savings goal",
+    "budget planner", "AI finance", "personal finance", "expense tracker",
+    "financial advisor", "savings goal",
   ],
   authors: [{ name: "FinSage AI" }],
   icons: {
-    icon: "/logo.svg",
+    icon: "/icon-192x192.png",
     apple: "/apple-touch-icon.png",
   },
+  manifest: "/manifest.json",
+  metadataBase: new URL("https://finsage-ai-omega.vercel.app"),
+  otherMetas: [{ name: "theme-color", content: "#059669" }],
 };
 
 export default function RootLayout({

@@ -14,6 +14,8 @@ import {
   signInWithGoogleRedirect,
   consumeGoogleRedirect,
   isPopupBlockedError,
+  onGoogleAuthStateChanged,
+  autoSignInWithGoogle,
 } from "@/lib/firebase-client";
 import { toast } from "sonner";
 
@@ -51,6 +53,34 @@ export function AuthView() {
   const [forgotSent, setForgotSent] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const googleReady = isGoogleLoginConfigured();
+  const [googleUser, setGoogleUser] = useState<string | null>(null);
+
+  // Auto-sign-in returning Google users on mount.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const token = await autoSignInWithGoogle();
+      if (token && !cancelled) {
+        try {
+          const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken: token });
+          if (res?.user && res?.token) {
+            setAuth(res.user, res.token);
+            toast.success("Welcome back!");
+          }
+        } catch {}
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for Google auth state changes (handles redirect flows).
+  useEffect(() => {
+    const unsub = onGoogleAuthStateChanged((user) => {
+      setGoogleUser(user?.uid ?? null);
+    });
+    return unsub;
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

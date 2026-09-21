@@ -11,11 +11,30 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
+  onAuthStateChanged,
+  signInWithCredential,
   type Auth,
+  type User,
 } from "firebase/auth";
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
+
+// Stores the Google credential locally so returning users can be re-signed in without re-prompting.
+let googleCredential: { idToken: string; refreshToken: string } | null = null;
+try {
+  const stored = typeof window !== "undefined" ? localStorage.getItem("finsage_google_cred") : null;
+  if (stored) googleCredential = JSON.parse(stored);
+} catch {}
+
+function storeGoogleCredential(cred: { idToken: string; refreshToken: string }) {
+  googleCredential = cred;
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("finsage_google_cred", JSON.stringify(cred));
+    }
+  } catch {}
+}
 
 export function isGoogleLoginConfigured(): boolean {
   return !!(process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
@@ -41,7 +60,7 @@ function getClientAuth(): Auth | null {
   }
 }
 
-/** Opens the Google popup and returns a Firebase ID token for our server to verify. */
+/** Opens the Google popup showing previously used accounts when available. */
 export async function signInWithGoogle(): Promise<string> {
   const a = getClientAuth();
   if (!a) {
@@ -50,8 +69,51 @@ export async function signInWithGoogle(): Promise<string> {
     );
   }
   const provider = new GoogleAuthProvider();
+  provider.addScope("email");
+  provider.addScope("profile");
+  // Force account chooser so returning users see their saved accounts
+  provider.setCustomParameters({ prompt: "select_account" });
+
+  // If we have a stored credential, try silent sign-in first.
+  // Fall back to popup if silent sign-in fails (e.g. expired token).
+  if (googleCredential) {
+    try {
+      const cred = GoogleAuthProvider.credential(googleCredential.idToken);
+      const result = await signInWithCredential(a, cred);
+      const token = await result.user.getIdToken();
+      storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
+      return token;
+    } catch {
+      // stale credential — fall through to popup
+    }
+  }
+
   const cred = await signInWithPopup(a, provider);
-  return cred.user.getIdToken();
+  const token = await cred.user.getIdToken();
+  storeGoogleCredential({ idToken: token, refreshToken: cred.user.refreshToken });
+  return token;
+}
+
+/** Returns true if the user is already signed in (session persisted). */
+export function onGoogleAuthStateChanged(cb: (user: User | null) => void): () => void {
+  const a = getClientAuth();
+  if (!a) return () => {};
+  return onAuthStateChanged(a, cb);
+}
+
+/** Auto-sign-in a returning Google user if a valid session exists. Returns the ID token or null. */
+export async function autoSignInWithGoogle(): Promise<string | null> {
+  const a = getClientAuth();
+  if (!a || !googleCredential) return null;
+  try {
+    const cred = GoogleAuthProvider.credential(googleCredential.idToken);
+    const result = await signInWithCredential(a, cred);
+    const token = await result.user.getIdToken();
+    storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
+    return token;
+  } catch {
+    return null;
+  }
 }
 
 export function isPopupBlockedError(err: any): boolean {
@@ -77,7 +139,7 @@ export async function consumeGoogleRedirect(): Promise<string | null> {
   try {
     const result = await getRedirectResult(a);
     if (!result?.user) return null;
-    return result.user.getIdToken();
+    return await result.user.getIdToken();
   } catch {
     return null;
   }

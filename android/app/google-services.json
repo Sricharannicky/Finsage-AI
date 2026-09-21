@@ -1,0 +1,38 @@
+{
+  "project_info": {
+    "project_number": "486739251367",
+    "firebase_url": "https://finbee-5b187.firebaseio.com",
+    "project_id": "finbee-5b187",
+    "storage_bucket": "finbee-5b187.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:486739251367:android:com.finsage.ai",
+        "android_client_info": {
+          "package_name": "com.finsage.ai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "486739251367-xxxxxxxxxxxxx.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMCON3DnoGa5Bfln8U6yDsiTxZZmJZZdU"
+        }
+      ],
+      "services": {
+        "app_invite_service": {
+          "other_platform_oauth_client": []
+        },
+        "analytics_service": {
+          "tracking_id": "UA-XXXXXXXXX-XX"
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

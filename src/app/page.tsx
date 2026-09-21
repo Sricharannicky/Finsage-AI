@@ -41,6 +41,15 @@ export default function Home() {
     refresh().finally(() => setServerChecked(true));
   }, [refresh]);
 
+  // Register PWA service worker
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+  }, []);
+
   // Show loading until we've checked with the server
   if (!serverChecked || !hydrated) {
     return (
