@@ -28,7 +28,17 @@ export async function POST(req: NextRequest) {
       // issues surface as JSON errors, never an HTML 500 page.
       const { getAuth } = await import("firebase-admin/auth");
       decoded = await getAuth(app).verifyIdToken(parsed.data.idToken);
-    } catch {
+    } catch (err: any) {
+      // Log the real reason (aud mismatch, expiry, clock skew…): the client
+      // only sees a generic message, but Vercel logs must show the cause.
+      // A frequent cause is the server Admin SDK project differing from the
+      // client web-app project (NEXT_PUBLIC_FIREBASE_*).
+      console.error(
+        "[auth/google] verifyIdToken failed:",
+        err?.message || err,
+        "| code:",
+        err?.code || err?.errorInfo?.code || "n/a"
+      );
       return NextResponse.json({ error: "Google sign-in expired. Please try again." }, { status: 401 });
     }
 

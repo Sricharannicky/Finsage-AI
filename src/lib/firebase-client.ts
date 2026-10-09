@@ -127,7 +127,8 @@ export async function signInWithGoogle(): Promise<string> {
     try {
       const cred = GoogleAuthProvider.credential(googleCredential.idToken);
       const result = await signInWithCredential(a, cred);
-      const token = await result.user.getIdToken();
+      // Force refresh: never exchange a cached/stale token with our server.
+      const token = await result.user.getIdToken(true);
       storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
       return token;
     } catch {
@@ -136,7 +137,8 @@ export async function signInWithGoogle(): Promise<string> {
   }
 
   const cred = await signInWithPopup(a, provider);
-  const token = await cred.user.getIdToken();
+  // Force refresh: guarantees the token sent to /api/auth/google is fresh.
+  const token = await cred.user.getIdToken(true);
   storeGoogleCredential({ idToken: token, refreshToken: cred.user.refreshToken });
   return token;
 }
@@ -155,7 +157,7 @@ export async function autoSignInWithGoogle(): Promise<string | null> {
   try {
     const cred = GoogleAuthProvider.credential(googleCredential.idToken);
     const result = await signInWithCredential(a, cred);
-    const token = await result.user.getIdToken();
+    const token = await result.user.getIdToken(true);
     storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
     return token;
   } catch {
@@ -197,7 +199,7 @@ export async function consumeGoogleRedirect(): Promise<string | null> {
     throw new Error(friendlyGoogleError(err));
   }
   if (!result?.user) return null;
-  const token = await result.user.getIdToken();
+  const token = await result.user.getIdToken(true);
   storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
   return token;
 }
