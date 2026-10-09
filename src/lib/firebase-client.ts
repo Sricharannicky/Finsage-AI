@@ -13,6 +13,7 @@ import {
   getRedirectResult,
   onAuthStateChanged,
   signInWithCredential,
+  signOut as firebaseSignOut,
   type Auth,
   type User,
 } from "firebase/auth";
@@ -143,6 +144,25 @@ export async function signInWithGoogle(): Promise<string> {
   return token;
 }
 
+/** Drops all Firebase-persisted auth state (redirect users, cached users).
+ *  Our sessions live in our own JWT + localStorage, so this is safe and
+ *  clears poisoned state left behind by failed redirect attempts. */
+export async function resetGoogleAuthState(): Promise<void> {
+  const a = getClientAuth();
+  if (!a) return;
+  try {
+    await firebaseSignOut(a);
+  } catch {
+    // best-effort cleanup
+  }
+  try {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("finsage_google_cred");
+    }
+  } catch {}
+  googleCredential = null;
+}
+
 /** Returns true if the user is already signed in (session persisted). */
 export function onGoogleAuthStateChanged(cb: (user: User | null) => void): () => void {
   const a = getClientAuth();
@@ -194,8 +214,13 @@ export async function consumeGoogleRedirect(): Promise<string | null> {
   try {
     result = await getRedirectResult(a);
   } catch (err: any) {
-    // A real failure (network, misconfiguration) — surface it instead of
-    // silently stranding the user on the login page.
+    // A failed redirect leaves a stale persisted redirect user behind,
+    // which replays the same failure on every page load. Reset all
+    // Firebase-persisted state so the next attempt starts clean.
+    // (Our sessions live in our own JWT, so this is safe.)
+    await resetGoogleAuthState();
+    // Surface the real failure instead of silently stranding the user.
+    console.error("[google-login][redirect] failed:", err?.code || err?.message || err);
     throw new Error(friendlyGoogleError(err));
   }
   if (!result?.user) return null;

@@ -146,6 +146,7 @@ export function AuthView() {
           toast.error(friendlyGoogleError(redirectErr));
         }
       } else {
+        console.error("[google-login][popup] failed:", err?.code || err?.message || err);
         toast.error(friendlyGoogleError(err));
       }
     } finally {
