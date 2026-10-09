@@ -11,6 +11,7 @@ import { api, ApiError } from "@/lib/api-client";
 import {
   isGoogleLoginConfigured,
   isNativeApp,
+  isRedirectingError,
   signInWithGoogle,
   signInWithGoogleRedirect,
   consumeGoogleRedirect,
@@ -143,9 +144,10 @@ export function AuthView() {
           await signInWithGoogleRedirect();
           return;
         } catch (redirectErr: any) {
-          toast.error(friendlyGoogleError(redirectErr));
+          // "Redirecting…" is control flow, not a failure — stay silent.
+          if (!isRedirectingError(redirectErr)) toast.error(friendlyGoogleError(redirectErr));
         }
-      } else {
+      } else if (!isRedirectingError(err)) {
         console.error("[google-login][popup] failed:", err?.code || err?.message || err);
         toast.error(friendlyGoogleError(err));
       }

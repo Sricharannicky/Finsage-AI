@@ -50,8 +50,8 @@ export async function POST(req: NextRequest) {
       token,
     });
   } catch (err: any) {
-    console.error("Login error:", err);
-    const errorMsg = err?.message || "An unexpected error occurred";
-    return NextResponse.json({ error: `Login failed: ${errorMsg}` }, { status: 500 });
+    // Never leak internal error details (e.g. Firestore gRPC codes) to clients.
+    console.error("Login error:", err?.message || err);
+    return NextResponse.json({ error: "Login failed. Please try again." }, { status: 500 });
   }
 }

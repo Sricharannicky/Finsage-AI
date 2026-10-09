@@ -203,7 +203,16 @@ export async function signInWithGoogleRedirect(): Promise<never> {
     );
   }
   await signInWithRedirect(a, buildProvider());
-  throw new Error("Redirecting to Google…");
+  // Control-flow throw (the page unloads into the redirect): callers must
+  // NOT show this as an error toast. See isRedirectingError().
+  const redirecting: any = new Error("Redirecting to Google…");
+  redirecting.code = "app/redirecting";
+  throw redirecting;
+}
+
+/** True for the deliberate post-redirect-navigation throw (not a real error). */
+export function isRedirectingError(err: any): boolean {
+  return err?.code === "app/redirecting";
 }
 
 /** Call on page load: completes a redirect sign-in and returns its ID token, or null. */
