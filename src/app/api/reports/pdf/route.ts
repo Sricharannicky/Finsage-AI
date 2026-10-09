@@ -19,6 +19,9 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const month = searchParams.get("month") || getCurrentMonthKey();
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return NextResponse.json({ error: "Invalid month. Use YYYY-MM." }, { status: 400 });
+  }
 
   // Gather all data for the report
   const data = await getUserFinancialData(user.id, month);
@@ -37,16 +40,24 @@ export async function GET(req: NextRequest) {
   const catCounts: Record<string, number> = {};
   for (const e of data.expenses) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
 
-  const recent = [
-    ...data.expenses.slice(0, 10).map((e) => ({
+  // Sort by raw timestamp BEFORE formatting (formatted en-IN strings don't sort chronologically)
+  const recentRaw = [
+    ...data.expenses.map((e) => ({
       type: "Expense" as const, amount: e.amount, category: e.category,
-      date: new Date(e.date).toLocaleDateString("en-IN"), note: e.note,
+      time: new Date(e.date).getTime(), note: e.note,
     })),
-    ...data.incomes.slice(0, 5).map((i) => ({
+    ...data.incomes.map((i) => ({
       type: "Income" as const, amount: i.amount, category: i.category,
-      date: new Date(i.date).toLocaleDateString("en-IN"), note: i.note || i.source,
+      time: new Date(i.date).getTime(), note: i.note || i.source,
     })),
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  ]
+    .sort((a, b) => b.time - a.time)
+    .slice(0, 15);
+
+  const recent = recentRaw.map((r) => ({
+    type: r.type, amount: r.amount, category: r.category,
+    date: new Date(r.time).toLocaleDateString("en-IN"), note: r.note,
+  }));
 
   const monthLabel = new Date(month + "-01").toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
@@ -76,28 +87,37 @@ export async function GET(req: NextRequest) {
     recent,
   };
 
-  // Spawn the Python script
+  // Spawn the Python script (requires python3 + reportlab on the server)
   const scriptPath = join(process.cwd(), "scripts", "generate-report-pdf.py");
-  const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
-    const py = spawn("python3", [scriptPath], { stdio: ["pipe", "pipe", "pipe"] });
-    const chunks: Buffer[] = [];
-    const errChunks: Buffer[] = [];
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+      const py = spawn("python3", [scriptPath], { stdio: ["pipe", "pipe", "pipe"] });
+      const chunks: Buffer[] = [];
+      const errChunks: Buffer[] = [];
 
-    py.stdout.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-    py.stderr.on("data", (chunk) => errChunks.push(Buffer.from(chunk)));
-    py.on("error", (err) => reject(new Error(`Failed to spawn python: ${err.message}`)));
-    py.on("close", (code) => {
-      if (code !== 0) {
-        const errMsg = Buffer.concat(errChunks).toString();
-        reject(new Error(`Python script failed (exit ${code}): ${errMsg}`));
-      } else {
-        resolve(Buffer.concat(chunks));
-      }
+      py.stdout.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      py.stderr.on("data", (chunk) => errChunks.push(Buffer.from(chunk)));
+      py.on("error", (err) => reject(new Error(`Failed to spawn python: ${err.message}`)));
+      py.on("close", (code) => {
+        if (code !== 0) {
+          const errMsg = Buffer.concat(errChunks).toString();
+          reject(new Error(`Python script failed (exit ${code}): ${errMsg}`));
+        } else {
+          resolve(Buffer.concat(chunks));
+        }
+      });
+
+      py.stdin.write(JSON.stringify(payload));
+      py.stdin.end();
     });
-
-    py.stdin.write(JSON.stringify(payload));
-    py.stdin.end();
-  });
+  } catch (err: any) {
+    console.error("[reports/pdf] generation failed:", err?.message || err);
+    return NextResponse.json(
+      { error: "PDF export is unavailable right now. Please try CSV export instead." },
+      { status: 500 }
+    );
+  }
 
   return new NextResponse(pdfBuffer as any, {
     headers: {

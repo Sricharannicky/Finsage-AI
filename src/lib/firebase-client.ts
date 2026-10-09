@@ -40,6 +40,52 @@ export function isGoogleLoginConfigured(): boolean {
   return !!(process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
 }
 
+/** True when running inside the Capacitor Android app (single-window WebView). */
+export function isNativeApp(): boolean {
+  try {
+    const w = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } };
+    return w.Capacitor?.isNativePlatform?.() === true;
+  } catch {
+    return false;
+  }
+}
+
+function buildProvider(): GoogleAuthProvider {
+  const provider = new GoogleAuthProvider();
+  provider.addScope("email");
+  provider.addScope("profile");
+  // Force account chooser so returning users see their saved accounts
+  provider.setCustomParameters({ prompt: "select_account" });
+  return provider;
+}
+
+/** Maps Firebase/network errors to messages the user can act on. */
+export function friendlyGoogleError(err: any): string {
+  const code: string | undefined = err?.code;
+  switch (code) {
+    case "auth/network-request-failed":
+      return "Can't reach Google. Check your internet connection and try again.";
+    case "auth/unauthorized-domain":
+      return "This app address isn't authorized for Google sign-in yet. Please use email sign-in for now.";
+    case "auth/popup-closed-by-user":
+    case "auth/user-cancelled":
+      return "Google sign-in was closed before finishing. Try again.";
+    case "auth/cancelled-popup-request":
+      return "Another sign-in window is already open. Please finish it or try again.";
+    case "auth/operation-not-supported-in-this-environment":
+      return "Google pop-up sign-in isn't supported here — redirecting to Google instead…";
+    case "auth/web-storage-unsupported":
+      return "Your browser blocks the storage Google sign-in needs. Allow cookies/site data and try again.";
+    case "auth/account-exists-with-different-credential":
+      return "An account with this email already exists. Sign in with your password instead.";
+    default:
+      break;
+  }
+  if (err instanceof Error && err.message && err.message !== "Failed to fetch") return err.message;
+  if (code) return `Google sign-in failed (${code}). Please try again.`;
+  return "Google sign-in failed. Please try again.";
+}
+
 function getClientAuth(): Auth | null {
   if (typeof window === "undefined") return null;
   if (!isGoogleLoginConfigured()) return null;
@@ -68,11 +114,12 @@ export async function signInWithGoogle(): Promise<string> {
       "Google login is not configured. Add NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN to .env (see .env.example)."
     );
   }
-  const provider = new GoogleAuthProvider();
-  provider.addScope("email");
-  provider.addScope("profile");
-  // Force account chooser so returning users see their saved accounts
-  provider.setCustomParameters({ prompt: "select_account" });
+  // Inside the Android app popups can't open (single-window WebView),
+  // so go straight to full-page redirect instead of a doomed popup.
+  if (isNativeApp()) {
+    await signInWithGoogleRedirect();
+  }
+  const provider = buildProvider();
 
   // If we have a stored credential, try silent sign-in first.
   // Fall back to popup if silent sign-in fails (e.g. expired token).
@@ -117,7 +164,12 @@ export async function autoSignInWithGoogle(): Promise<string | null> {
 }
 
 export function isPopupBlockedError(err: any): boolean {
-  return err?.code === "auth/popup-blocked";
+  // WebViews / in-app browsers throw operation-not-supported instead of
+  // popup-blocked; both mean "fall back to full-page redirect".
+  return (
+    err?.code === "auth/popup-blocked" ||
+    err?.code === "auth/operation-not-supported-in-this-environment"
+  );
 }
 
 /** Fallback when the browser blocks popups: full-page redirect to Google. */
@@ -128,7 +180,7 @@ export async function signInWithGoogleRedirect(): Promise<never> {
       "Google login is not configured. Add NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN to .env (see .env.example)."
     );
   }
-  await signInWithRedirect(a, new GoogleAuthProvider());
+  await signInWithRedirect(a, buildProvider());
   throw new Error("Redirecting to Google…");
 }
 
@@ -136,11 +188,16 @@ export async function signInWithGoogleRedirect(): Promise<never> {
 export async function consumeGoogleRedirect(): Promise<string | null> {
   const a = getClientAuth();
   if (!a) return null;
+  let result;
   try {
-    const result = await getRedirectResult(a);
-    if (!result?.user) return null;
-    return await result.user.getIdToken();
-  } catch {
-    return null;
+    result = await getRedirectResult(a);
+  } catch (err: any) {
+    // A real failure (network, misconfiguration) — surface it instead of
+    // silently stranding the user on the login page.
+    throw new Error(friendlyGoogleError(err));
   }
+  if (!result?.user) return null;
+  const token = await result.user.getIdToken();
+  storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
+  return token;
 }

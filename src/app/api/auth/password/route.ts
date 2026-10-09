@@ -15,11 +15,18 @@ export async function PUT(req: NextRequest) {
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
   }
 
   const user = await db.user.findUnique({ where: { id: sessionUser.id } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  if (!(user as any).passwordHash) {
+    return NextResponse.json(
+      { error: "This account uses Google sign-in. Please continue with Google." },
+      { status: 401 }
+    );
+  }
 
   const valid = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
   if (!valid) {

@@ -3,9 +3,20 @@ import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "budget-ai-super-secret-key-change-in-production-2024"
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      // Fail loudly: silently falling back to a known default would let
+      // anyone forge session tokens for any user (auth bypass).
+      throw new Error(
+        "JWT_SECRET is not configured. Set it in the hosting environment (e.g. Vercel → Project → Settings → Environment Variables)."
+      );
+    }
+    return new TextEncoder().encode("dev-only-insecure-secret-do-not-use-in-production");
+  }
+  return new TextEncoder().encode(secret);
+}
 
 const COOKIE_NAME = "budget_session";
 const SESSION_DURATION = "7d";
@@ -31,7 +42,7 @@ export async function createSession(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(SESSION_DURATION)
-    .sign(JWT_SECRET);
+    .sign(getJwtSecret());
   return token;
 }
 
@@ -39,7 +50,7 @@ export async function verifySession(
   token: string
 ): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getJwtSecret());
     return {
       userId: payload.userId as string,
       email: payload.email as string,

@@ -46,6 +46,12 @@ export const useAuthStore = create<AuthState>()(
             set({ hydrated: true });
           }
         } catch (err) {
+          // Network unreachable (status 0): keep the persisted session and
+          // let the user retry instead of bouncing to login in a loop.
+          if (err instanceof ApiError && err.status === 0) {
+            set({ hydrated: true });
+            return;
+          }
           // Stale/invalid token (e.g. JWT secret rotated or user deleted):
           // drop the persisted session so the user lands on login
           // instead of a stuck "session expired" dashboard.

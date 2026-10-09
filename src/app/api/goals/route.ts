@@ -8,8 +8,24 @@ const createSchema = z.object({
   category: z.string().min(1),
   targetAmount: z.number().positive(),
   currentAmount: z.number().min(0).default(0),
-  deadline: z.string().nullable().optional(),
+  deadline: z.string().nullable().optional().refine(
+    (s) => s == null || !isNaN(new Date(s).getTime()),
+    "Invalid date"
+  ),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
+});
+
+const updateSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(2).optional(),
+  category: z.string().min(1).optional(),
+  targetAmount: z.number().positive().finite().optional(),
+  currentAmount: z.number().min(0).finite().optional(),
+  deadline: z.string().nullable().optional().refine(
+    (s) => s == null || !isNaN(new Date(s).getTime()),
+    "Invalid date"
+  ),
+  priority: z.enum(["low", "medium", "high"]).optional(),
 });
 
 export async function GET() {
@@ -30,7 +46,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
   }
 
   const data: any = { ...parsed.data, userId: user.id };
@@ -46,9 +62,13 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { id, ...data } = body;
-  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-  if (data.deadline) data.deadline = new Date(data.deadline);
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
+  }
+  const { id, ...rest } = parsed.data;
+  const data: Record<string, any> = { ...rest };
+  if (data.deadline) data.deadline = new Date(data.deadline); // validity already checked by schema
 
   const goal = await db.savingsGoal.update({
     where: { id, userId: user.id },

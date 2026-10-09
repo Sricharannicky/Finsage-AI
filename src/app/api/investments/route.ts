@@ -9,7 +9,18 @@ const createSchema = z.object({
   investedAmount: z.number().min(0),
   currentValue: z.number().min(0),
   units: z.number().min(0).default(0),
-  purchaseDate: z.string(),
+  purchaseDate: z.string().refine((s) => !isNaN(new Date(s).getTime()), "Invalid date"),
+  note: z.string().nullable().optional(),
+});
+
+const updateSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(2).optional(),
+  type: z.enum(["stock", "mutual_fund", "etf", "crypto", "fixed_deposit", "ppf", "gold", "other"]).optional(),
+  investedAmount: z.number().min(0).finite().optional(),
+  currentValue: z.number().min(0).finite().optional(),
+  units: z.number().min(0).finite().optional(),
+  purchaseDate: z.string().refine((s) => !isNaN(new Date(s).getTime()), "Invalid date").optional(),
   note: z.string().nullable().optional(),
 });
 
@@ -56,7 +67,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
   }
 
   const inv = await db.investment.create({
@@ -70,9 +81,13 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { id, ...data } = body;
-  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
-  if (data.purchaseDate) data.purchaseDate = new Date(data.purchaseDate);
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
+  }
+  const { id, ...rest } = parsed.data;
+  const data: Record<string, any> = { ...rest };
+  if (data.purchaseDate) data.purchaseDate = new Date(data.purchaseDate); // validity already checked by schema
 
   const inv = await db.investment.update({ where: { id, userId: user.id }, data });
   return NextResponse.json({ investment: inv });

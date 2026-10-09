@@ -7,9 +7,19 @@ const createSchema = z.object({
   amount: z.number().positive("Amount must be positive"),
   source: z.string().min(1),
   category: z.string().min(1),
-  date: z.string(),
+  date: z.string().refine((s) => !isNaN(new Date(s).getTime()), "Invalid date"),
   note: z.string().optional().nullable(),
   recurring: z.boolean().optional().default(false),
+});
+
+const updateSchema = z.object({
+  id: z.string().min(1),
+  amount: z.number().positive("Amount must be positive").finite().optional(),
+  source: z.string().min(1).optional(),
+  category: z.string().min(1).optional(),
+  date: z.string().refine((s) => !isNaN(new Date(s).getTime()), "Invalid date").optional(),
+  note: z.string().optional().nullable(),
+  recurring: z.boolean().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -52,7 +62,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
   }
 
   const income = await db.income.create({
@@ -66,10 +76,14 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { id, ...data } = body;
-  if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
+  }
+  const { id, ...rest } = parsed.data;
+  const data: Record<string, any> = { ...rest };
 
-  if (data.date) data.date = new Date(data.date);
+  if (data.date) data.date = new Date(data.date); // validity already checked by schema
 
   const income = await db.income.update({
     where: { id, userId: user.id },

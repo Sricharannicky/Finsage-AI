@@ -133,7 +133,9 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
       toast.success("All notifications marked as read");
-    } catch {}
+    } catch (err: any) {
+      toast.error(err?.message || "Couldn't mark notifications as read");
+    }
   }
 
   async function clearRead() {
@@ -141,7 +143,9 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
       await api.post("/api/notifications/clear");
       setNotifications((prev) => prev.filter((n) => !n.read));
       toast.success("Read notifications cleared");
-    } catch {}
+    } catch (err: any) {
+      toast.error(err?.message || "Couldn't clear notifications");
+    }
   }
 
   async function deleteNotification(id: string) {
@@ -152,7 +156,9 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
         setUnreadCount(next.filter((n) => !n.read).length);
         return next;
       });
-    } catch {}
+    } catch (err: any) {
+      toast.error(err?.message || "Couldn't delete notification");
+    }
   }
 
   useEffect(() => {

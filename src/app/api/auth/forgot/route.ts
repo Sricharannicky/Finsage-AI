@@ -7,10 +7,25 @@ import { sendEmail, passwordResetEmailHtml } from "@/lib/email";
 const schema = z.object({ email: z.string().email("Invalid email") });
 
 function getAppUrl(req: NextRequest): string {
-  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
-  const proto = req.headers.get("x-forwarded-proto") || "http";
-  const host = req.headers.get("host") || "localhost:3000";
-  return `${proto}://${host}`;
+  const reqProto = req.headers.get("x-forwarded-proto") || "http";
+  const reqHost = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  const configured = process.env.APP_URL?.replace(/\/$/, "");
+
+  // Prefer the live request host: it is authoritative for where the link
+  // will be opened. This keeps reset links correct even when APP_URL is
+  // stale/misconfigured (e.g. an outdated Vercel env var).
+  if (reqHost) {
+    try {
+      const configuredHost = configured ? new URL(configured).host : null;
+      if (!configured || configuredHost === reqHost) {
+        return configured ?? `${reqProto}://${reqHost}`;
+      }
+    } catch {
+      // malformed APP_URL → fall through to request host
+    }
+    return `${reqProto}://${reqHost}`;
+  }
+  return configured || "http://localhost:3000";
 }
 
 export async function POST(req: NextRequest) {

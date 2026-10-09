@@ -53,3 +53,9 @@ server.log
 # Skills directory
 /skills/db/
 *.db
+
+# Android release signing — NEVER commit keystores or signing secrets
+*.jks
+*.keystore
+android/keystore.properties
+android/app/keystore.properties

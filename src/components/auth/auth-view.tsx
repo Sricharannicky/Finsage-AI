@@ -10,10 +10,12 @@ import { useAuthStore } from "@/lib/auth-store";
 import { api, ApiError } from "@/lib/api-client";
 import {
   isGoogleLoginConfigured,
+  isNativeApp,
   signInWithGoogle,
   signInWithGoogleRedirect,
   consumeGoogleRedirect,
   isPopupBlockedError,
+  friendlyGoogleError,
   onGoogleAuthStateChanged,
   autoSignInWithGoogle,
 } from "@/lib/firebase-client";
@@ -124,21 +126,27 @@ export function AuthView() {
   const handleGoogle = async () => {
     setGoogleLoading(true);
     try {
+      if (isNativeApp()) {
+        // Inside the Android app: popups can't open, so redirect directly.
+        toast.info("Opening Google sign-in…");
+        await signInWithGoogleRedirect();
+        return;
+      }
       const idToken = await signInWithGoogle();
       await exchangeGoogleToken(idToken);
     } catch (err: any) {
-      // Browser blocked the popup (common with strict popup blockers):
-      // fall back to full-page redirect, which always works.
+      // Browser blocked the popup (common with strict popup blockers and
+      // in WebViews): fall back to full-page redirect, which always works.
       if (isPopupBlockedError(err)) {
-        toast.info("Popup blocked — redirecting to Google instead…");
+        toast.info("Opening Google sign-in…");
         try {
           await signInWithGoogleRedirect();
           return;
         } catch (redirectErr: any) {
-          toast.error(redirectErr?.message || "Google sign-in failed");
+          toast.error(friendlyGoogleError(redirectErr));
         }
       } else {
-        toast.error(err?.message || "Google sign-in failed");
+        toast.error(friendlyGoogleError(err));
       }
     } finally {
       setGoogleLoading(false);
@@ -156,7 +164,7 @@ export function AuthView() {
           await exchangeGoogleToken(idToken);
         }
       } catch (err: any) {
-        if (!cancelled) toast.error(err?.message || "Google sign-in failed");
+        if (!cancelled) toast.error(friendlyGoogleError(err));
       } finally {
         if (!cancelled) setGoogleLoading(false);
       }

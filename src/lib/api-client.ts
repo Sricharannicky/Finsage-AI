@@ -69,6 +69,14 @@ async function request<T>(
     ...options,
     headers,
     credentials: "include",
+  }).catch(() => {
+    // Network-level failure (offline, DNS, TLS, server unreachable):
+    // fetch rejects with a bare TypeError("Failed to fetch"). Convert it
+    // into an ApiError so callers show an actionable message instead.
+    throw new ApiError(
+      `Can't reach the server (${url}). Check your internet connection and try again.`,
+      0
+    );
   });
 
   const text = await res.text();

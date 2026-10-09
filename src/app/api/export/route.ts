@@ -17,6 +17,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type") || "expenses"; // expenses | income | all
   const month = searchParams.get("month") || getCurrentMonthKey();
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
+    return NextResponse.json({ error: "Invalid month. Use YYYY-MM." }, { status: 400 });
+  }
   const { start, end } = getMonthRange(month);
 
   const rows: string[] = [];

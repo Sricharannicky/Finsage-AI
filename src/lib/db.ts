@@ -51,6 +51,7 @@ function serializeForFirestore(data: Record<string, any>): Record<string, any> {
   const out: Record<string, any> = {};
   for (const [k, v] of Object.entries(data)) {
     if (v instanceof Date) {
+      if (isNaN(v.getTime())) throw new Error(`Invalid date value for field "${k}"`);
       out[k] = Timestamp.fromDate(v);
     } else {
       out[k] = v;

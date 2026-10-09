@@ -1,5 +1,23 @@
 apply plugin: 'com.android.application'
 
+// --- Release signing -------------------------------------------------------
+// Values are read from (first match wins):
+//   1. android/keystore.properties  (git-ignored; NOT committed)
+//   2. Gradle properties / env vars: FINSAGE_STORE_FILE, FINSAGE_STORE_PASSWORD,
+//      FINSAGE_KEY_ALIAS, FINSAGE_KEY_PASSWORD
+// Never hardcode passwords or keystore paths in this file.
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file('keystore.properties')
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+def signingStoreFile = keystoreProps.getProperty('storeFile') ?: findProperty('FINSAGE_STORE_FILE') ?: System.getenv('FINSAGE_STORE_FILE')
+def signingStorePassword = keystoreProps.getProperty('storePassword') ?: findProperty('FINSAGE_STORE_PASSWORD') ?: System.getenv('FINSAGE_STORE_PASSWORD')
+def signingKeyAlias = keystoreProps.getProperty('keyAlias') ?: findProperty('FINSAGE_KEY_ALIAS') ?: System.getenv('FINSAGE_KEY_ALIAS')
+def signingKeyPassword = keystoreProps.getProperty('keyPassword') ?: findProperty('FINSAGE_KEY_PASSWORD') ?: System.getenv('FINSAGE_KEY_PASSWORD')
+def hasReleaseSigning = signingStoreFile && signingStorePassword && signingKeyAlias && signingKeyPassword
+
 android {
     namespace = "com.finsage.ai"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +34,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(signingStoreFile)
+                storePassword signingStorePassword
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
