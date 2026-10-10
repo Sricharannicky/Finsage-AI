@@ -16,6 +16,14 @@ function getPrivateKey(): string | undefined {
   return unquoted.replace(/\\n/g, "\n");
 }
 
+/** Trims pasted whitespace from scalar env values. A trailing space or
+ *  newline copied from a dashboard would otherwise silently break exact
+ *  comparisons (projectMatch) and credential identity. No-op when clean. */
+function cleanEnv(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
+}
+
 /** Project ID embedded in a service-account email
  *  (firebase-adminsdk-…@<project>.iam.gserviceaccount.com).
  *  Project IDs are public identifiers — safe to log and return. */
@@ -51,8 +59,8 @@ export interface AdminDiagnostics {
 /** Safe diagnostics: answers "is this the right key for the right project"
  *  without ever exposing the key, email, tokens, or user data. */
 export function getAdminDiagnostics(): AdminDiagnostics {
-  const projectIdEnv = process.env.FIREBASE_PROJECT_ID || null;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || null;
+  const projectIdEnv = cleanEnv(process.env.FIREBASE_PROJECT_ID) ?? null;
+  const clientEmail = cleanEnv(process.env.FIREBASE_CLIENT_EMAIL) ?? null;
   const emailProject = projectFromClientEmail(clientEmail || undefined);
   const raw = process.env.FIREBASE_PRIVATE_KEY;
   const key = getPrivateKey();
@@ -83,8 +91,8 @@ function initApp(): App | null {
     return existing[0]!;
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const projectId = cleanEnv(process.env.FIREBASE_PROJECT_ID);
+  const clientEmail = cleanEnv(process.env.FIREBASE_CLIENT_EMAIL);
   const privateKey = getPrivateKey();
 
   if (!projectId || !clientEmail || !privateKey) {
@@ -117,8 +125,8 @@ function initApp(): App | null {
 
 export function isFirebaseConfigured(): boolean {
   return !!(
-    process.env.FIREBASE_PROJECT_ID &&
-    process.env.FIREBASE_CLIENT_EMAIL &&
+    cleanEnv(process.env.FIREBASE_PROJECT_ID) &&
+    cleanEnv(process.env.FIREBASE_CLIENT_EMAIL) &&
     process.env.FIREBASE_PRIVATE_KEY
   );
 }
