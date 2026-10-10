@@ -32,7 +32,7 @@ export interface AdminKeyShape {
   hasBeginMarker: boolean;
   hasEndMarker: boolean;
   hasLineBreaks: boolean;
-  wasWrappedInQuotes: boolean;
+  wrappedInQuotes: boolean;
   approxLength: number;
 }
 
