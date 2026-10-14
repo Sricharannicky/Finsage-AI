@@ -10,16 +10,13 @@ import { useAuthStore } from "@/lib/auth-store";
 import { api, ApiError } from "@/lib/api-client";
 import {
   isGoogleLoginConfigured,
-  isNativeApp,
-  isRedirectingError,
   signInWithGoogle,
-  signInWithGoogleRedirect,
-  consumeGoogleRedirect,
-  isPopupBlockedError,
   friendlyGoogleError,
-  onGoogleAuthStateChanged,
-  autoSignInWithGoogle,
 } from "@/lib/firebase-client";
+import {
+  getGoogleClientId,
+  signInWithGIS,
+} from "@/lib/google-auth";
 import { toast } from "sonner";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -55,35 +52,8 @@ export function AuthView() {
   const [password, setPassword] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
-  const googleReady = isGoogleLoginConfigured();
-  const [googleUser, setGoogleUser] = useState<string | null>(null);
 
-  // Auto-sign-in returning Google users on mount.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const token = await autoSignInWithGoogle();
-      if (token && !cancelled) {
-        try {
-          const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken: token });
-          if (res?.user && res?.token) {
-            setAuth(res.user, res.token);
-            toast.success("Welcome back!");
-          }
-        } catch {}
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
-  // Listen for Google auth state changes (handles redirect flows).
-  useEffect(() => {
-    const unsub = onGoogleAuthStateChanged((user) => {
-      setGoogleUser(user?.uid ?? null);
-    });
-    return unsub;
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,8 +84,8 @@ export function AuthView() {
     }
   };
 
-  const exchangeGoogleToken = async (idToken: string) => {
-    const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken });
+  const exchangeGoogleCredential = async (cred: { idToken?: string; accessToken?: string }) => {
+    const res = await api.post<{ user: any; token?: string }>("/api/auth/google", cred);
     if (res?.user && res?.token) {
       setAuth(res.user, res.token);
       toast.success("Signed in with Google!");
@@ -124,59 +94,50 @@ export function AuthView() {
     }
   };
 
-  const handleGoogle = async () => {
-    setGoogleLoading(true);
-    try {
-      if (isNativeApp()) {
-        // Inside the Android app: popups can't open, so redirect directly.
-        toast.info("Opening Google sign-in…");
-        await signInWithGoogleRedirect();
-        return;
-      }
-      const idToken = await signInWithGoogle();
-      await exchangeGoogleToken(idToken);
-    } catch (err: any) {
-      // Browser blocked the popup (common with strict popup blockers and
-      // in WebViews): fall back to full-page redirect, which always works.
-      if (isPopupBlockedError(err)) {
-        toast.info("Opening Google sign-in…");
-        try {
-          await signInWithGoogleRedirect();
-          return;
-        } catch (redirectErr: any) {
-          // "Redirecting…" is control flow, not a failure — stay silent.
-          if (!isRedirectingError(redirectErr)) toast.error(friendlyGoogleError(redirectErr));
-        }
-      } else if (!isRedirectingError(err)) {
-        console.error("[google-login][popup] failed:", err?.code || err?.message || err);
-        toast.error(friendlyGoogleError(err));
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
+  const exchangeGoogleToken = async (idToken: string) => {
+    return exchangeGoogleCredential({ idToken });
   };
 
-  // Complete a redirect-based Google sign-in when returning from Google.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  const handleGoogle = async () => {
+    // 1. If Google GIS Client ID is configured in .env:
+    if (getGoogleClientId()) {
+      setGoogleLoading(true);
       try {
-        const idToken = await consumeGoogleRedirect();
-        if (idToken && !cancelled) {
-          setGoogleLoading(true);
-          await exchangeGoogleToken(idToken);
-        }
+        const { accessToken } = await signInWithGIS();
+        await exchangeGoogleCredential({ accessToken });
       } catch (err: any) {
-        if (!cancelled) toast.error(friendlyGoogleError(err));
+        console.error("[google-login][gis] failed:", err);
+        toast.error(err?.message || "Google sign-in failed");
       } finally {
-        if (!cancelled) setGoogleLoading(false);
+        setGoogleLoading(false);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      return;
+    }
+
+    // 2. If Firebase Google sign-in is configured:
+    if (isGoogleLoginConfigured()) {
+      // Trigger popup synchronously in click event stack to prevent popup blocker
+      const loginPromise = signInWithGoogle();
+      setGoogleLoading(true);
+      loginPromise
+        .then((idToken) => exchangeGoogleCredential({ idToken }))
+        .catch((err) => {
+          if (err?.code !== "auth/popup-blocked" && err?.code !== "auth/popup-closed-by-user") {
+            console.error("[google-login][popup] failed:", err?.code || err?.message || err);
+          } else {
+            console.warn("[google-login][popup]:", err?.code || err?.message);
+          }
+          toast.error(friendlyGoogleError(err), { duration: 6000 });
+        })
+        .finally(() => {
+          setGoogleLoading(false);
+        });
+      return;
+    }
+
+    // 3. Unconfigured fallback
+    toast.error("Google sign-in is not configured. Please check your .env file.");
+  };
 
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -476,21 +437,19 @@ export function AuthView() {
               </div>
             </div>
 
-            {googleReady && (
-              <Button
-                onClick={handleGoogle}
-                disabled={loading || googleLoading}
-                variant="outline"
-                className="w-full h-11 mb-3"
-              >
-                {googleLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <GoogleIcon className="size-4" />
-                )}
-                Continue with Google
-              </Button>
-            )}
+            <Button
+              onClick={handleGoogle}
+              disabled={loading || googleLoading}
+              variant="outline"
+              className="w-full h-11 mb-3"
+            >
+              {googleLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <GoogleIcon className="size-4" />
+              )}
+              Continue with Google
+            </Button>
 
             <Button
               onClick={handleDemo}
