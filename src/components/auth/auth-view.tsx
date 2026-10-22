@@ -176,6 +176,9 @@ export function AuthView() {
       setForgotStep("otp");
       setEmailSent(!!res?.emailSent);
       setDebugOtp(res?.debugOtp || null);
+      if (res?.debugOtp && !res?.emailSent) {
+        setOtp(res.debugOtp);
+      }
       setCountdown(60);
 
       if (res?.emailSent) {
@@ -419,24 +422,28 @@ export function AuthView() {
                     <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs flex items-center justify-between gap-3">
                       <div>
                         <p className="font-semibold text-amber-700 dark:text-amber-300">
-                          Demo / Local OTP:{" "}
+                          {emailSent ? "Code sent to email" : "Local Dev Code (No SMTP in .env):"}{" "}
                           <span className="font-mono text-sm tracking-widest text-foreground font-bold ml-1">
                             {debugOtp}
                           </span>
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {emailSent ? "Also sent to your email" : "Email provider is not configured in .env"}
+                          {emailSent
+                            ? "Check your inbox or spam folder"
+                            : "Auto-filled below for instant testing without email setup"}
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setOtp(debugOtp)}
-                        className="h-7 text-xs border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shrink-0"
-                      >
-                        Auto-fill
-                      </Button>
+                      {otp !== debugOtp && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setOtp(debugOtp)}
+                          className="h-7 text-xs border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shrink-0"
+                        >
+                          Auto-fill
+                        </Button>
+                      )}
                     </div>
                   )}
 
