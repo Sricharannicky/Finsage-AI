@@ -86,8 +86,8 @@ export async function createAndSendOtp(
     }
   }
 
-  // Provide debugOtp if email is not configured or in dev mode so the user is never stuck
-  const shouldExposeDebug = !emailSent || process.env.NODE_ENV !== "production";
+  // Only expose debugOtp if email sending was not successful or unconfigured
+  const shouldExposeDebug = !emailSent;
 
   return {
     success: true,
