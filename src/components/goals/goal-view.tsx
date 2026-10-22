@@ -18,6 +18,7 @@ import { PageHeader, LoadingState, EmptyState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { SAVINGS_GOAL_CATEGORIES, formatCurrency, formatDate } from "@/lib/constants";
 import { toast } from "sonner";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import type { SavingsGoal } from "@/lib/types";
 
 interface Projection {
@@ -53,6 +54,11 @@ export function GoalView() {
 
   useEffect(() => {
     loadGoals();
+    const handleDataChanged = () => {
+      loadGoals();
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
   }, []);
 
   async function loadGoals() {

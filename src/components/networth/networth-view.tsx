@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { PageHeader, LoadingState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/constants";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import { toast } from "sonner";
 
 interface NetWorthData {
@@ -23,10 +24,15 @@ export function NetWorthView() {
   const [data, setData] = useState<NetWorthData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const handleDataChanged = () => load(true);
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+  }, []);
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get<NetWorthData>("/api/networth");
       setData(res);

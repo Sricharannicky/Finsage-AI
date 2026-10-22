@@ -1,4 +1,5 @@
 // API client for frontend - server-side fetch wrapper with credentials
+import { notifyDataChanged } from "./events";
 
 export class ApiError extends Error {
   status: number;
@@ -99,6 +100,24 @@ async function request<T>(
     }
 
     throw new ApiError(message, res.status);
+  }
+
+  // Automatically notify all UI components to re-fetch when financial data changes
+  if (options.method && options.method !== "GET") {
+    const MUTATION_ENDPOINTS = [
+      "/api/expenses",
+      "/api/income",
+      "/api/budgets",
+      "/api/goals",
+      "/api/bills",
+      "/api/recurring",
+      "/api/investments",
+      "/api/import",
+      "/api/seed",
+    ];
+    if (MUTATION_ENDPOINTS.some((prefix) => url.startsWith(prefix))) {
+      notifyDataChanged();
+    }
   }
 
   return data as T;

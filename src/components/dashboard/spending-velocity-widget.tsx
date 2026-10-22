@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/constants";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 
 interface VelocityData {
   totalSpent: number;
@@ -29,10 +30,15 @@ export function SpendingVelocityWidget() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<VelocityData>("/api/dashboard/velocity")
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+    function load() {
+      api.get<VelocityData>("/api/dashboard/velocity")
+        .then(setData)
+        .catch(() => setData(null))
+        .finally(() => setLoading(false));
+    }
+    load();
+    window.addEventListener(DATA_CHANGED_EVENT, load);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, load);
   }, []);
 
   if (loading) {

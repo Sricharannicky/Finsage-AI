@@ -213,14 +213,42 @@ Through this project I gained practical exposure to:
 # ⚙️ Installation
 
 ```bash
+# 1. Clone repository
 git clone https://github.com/Sricharannicky/Finsage-AI.git
-
 cd Finsage-AI
 
+# 2. Install dependencies
 npm install
 
+# 3. Setup environment variables
+cp .env.example .env
+# (Optional) Add your free Groq API key in .env from https://console.groq.com for AI insights
+
+# 4. Initialize local SQLite database
+npm run db:push
+
+# 5. Start the development server
 npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+- Click **Continue with Google** to sign in with Google.
+- Click **Try Demo with Sample Data** for an instant interactive experience with pre-seeded transactions!
+
+---
+
+# 🔑 Google Sign-In Configuration
+
+FinSage AI supports official Google OAuth 2.0:
+
+1. Create a Web OAuth 2.0 Client ID at [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. Add your Authorized JavaScript origin: `http://localhost:3000`
+3. Add to your `.env` file:
+   ```env
+   NEXT_PUBLIC_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+   ```
+*(When running locally without a Google Client ID, clicking "Continue with Google" opens the interactive local Google test sign-in).*
 
 ---
 

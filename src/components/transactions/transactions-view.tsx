@@ -18,6 +18,7 @@ import { formatCurrency, formatDate, getCategoryIcon } from "@/lib/constants";
 import { getCurrentMonthKey } from "@/lib/finance-utils";
 import type { Income, Expense } from "@/lib/types";
 import type { ViewType } from "@/components/layout/app-shell";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 
 type Txn = (Income & { _type: "income" }) | (Expense & { _type: "expense" });
 
@@ -31,6 +32,11 @@ export function TransactionsView({ onViewChange }: { onViewChange: (v: ViewType)
 
   useEffect(() => {
     loadTransactions();
+    const handleDataChanged = () => {
+      loadTransactions();
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
   }, [month]);
 
   async function loadTransactions() {

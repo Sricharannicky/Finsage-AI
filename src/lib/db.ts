@@ -10,7 +10,15 @@
 //   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
 
 import { getFirestore, isFirebaseConfigured } from "./firebase";
+import { prisma } from "./prisma";
 import { Timestamp, type DocumentData, type QuerySnapshot } from "firebase-admin/firestore";
+
+export function isLocalDatabase(): boolean {
+  if (process.env.USE_LOCAL_DB === "true" || process.env.DATABASE_PROVIDER === "sqlite") {
+    return true;
+  }
+  return !isFirebaseConfigured();
+}
 
 function assertConfigured() {
   if (!isFirebaseConfigured()) {
@@ -304,7 +312,7 @@ async function fetchAll(model: string, where?: any): Promise<any[]> {
   return docs.filter((doc) => matchesWhere(doc, where));
 }
 
-function createHandler(model: string) {
+function createFirestoreHandler(model: string) {
   const colName = COLLECTIONS[model];
 
   async function findUniqueDoc(where: any, select?: any) {
@@ -504,6 +512,62 @@ function createHandler(model: string) {
   };
 
   return handler;
+}
+
+function createHandler(model: string) {
+  const fsHandler = createFirestoreHandler(model);
+  const prismaModel = (prisma as any)[model];
+
+  return {
+    async findMany(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.findMany(args);
+      return fsHandler.findMany(args);
+    },
+    async findUnique(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.findUnique(args);
+      return fsHandler.findUnique(args);
+    },
+    async findFirst(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.findFirst(args);
+      return fsHandler.findFirst(args);
+    },
+    async create(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.create(args);
+      return fsHandler.create(args);
+    },
+    async createMany(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.createMany(args);
+      return fsHandler.createMany(args);
+    },
+    async update(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.update(args);
+      return fsHandler.update(args);
+    },
+    async updateMany(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.updateMany(args);
+      return fsHandler.updateMany(args);
+    },
+    async delete(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.delete(args);
+      return fsHandler.delete(args);
+    },
+    async deleteMany(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.deleteMany(args);
+      return fsHandler.deleteMany(args);
+    },
+    async count(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.count(args);
+      return fsHandler.count(args);
+    },
+    async aggregate(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.aggregate(args);
+      return fsHandler.aggregate(args);
+    },
+    async upsert(args: any = {}) {
+      if (isLocalDatabase()) return prismaModel.upsert(args);
+      return fsHandler.upsert(args);
+    },
+  };
 }
 
 export const db = {

@@ -19,6 +19,7 @@ import { useAuthStore } from "@/lib/auth-store";
 import { api } from "@/lib/api-client";
 import { formatRelativeTime } from "@/lib/constants";
 import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/events";
 import type { Notification } from "@/lib/types";
 
 export type ViewType =
@@ -373,7 +374,7 @@ export function AppShell({ activeView, onViewChange, children }: AppShellProps) 
       </div>
 
       {/* Global Quick Add FAB */}
-      <QuickAddFAB />
+      <QuickAddFAB onTransactionAdded={notifyDataChanged} />
 
       {/* Command Palette (Cmd+K) */}
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onNavigate={onViewChange} />

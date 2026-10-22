@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { PageHeader, LoadingState, EmptyState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { formatCurrency, formatDate, CHART_COLORS } from "@/lib/constants";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import { toast } from "sonner";
 
 const INVESTMENT_TYPES = [
@@ -68,15 +69,20 @@ export function InvestmentsView() {
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split("T")[0]);
   const [note, setNote] = useState("");
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const handleDataChanged = () => load(true);
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+  }, []);
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get<InvestmentsData>("/api/investments");
       setData(res);
       // Load AI insights lazily
-      setInsightsLoading(true);
+      if (!silent) setInsightsLoading(true);
       api.get<InsightsData>("/api/ai/investment-insights")
         .then(setInsights)
         .catch(() => setInsights(null))

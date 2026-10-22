@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader, LoadingState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/constants";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import { toast } from "sonner";
 
 interface Debt {
@@ -39,10 +40,15 @@ export function DebtPayoffView() {
   const [loading, setLoading] = useState(true);
   const [activeStrategy, setActiveStrategy] = useState<"avalanche" | "snowball">("avalanche");
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const handleDataChanged = () => load(true);
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+  }, []);
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get<DebtData>("/api/ai/debt-payoff");
       setData(res);

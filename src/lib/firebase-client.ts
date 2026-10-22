@@ -1,7 +1,6 @@
 // Firebase CLIENT SDK (browser) — used only for Google sign-in popup.
 // Public config (safe to expose, must start with NEXT_PUBLIC_):
 //   NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-// Get them: Firebase Console → Project Settings → General → Your apps → Web app (</>).
 "use client";
 
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
@@ -9,10 +8,6 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  onAuthStateChanged,
-  signInWithCredential,
   signOut as firebaseSignOut,
   type Auth,
   type User,
@@ -21,19 +16,10 @@ import {
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 
-// Stores the Google credential locally so returning users can be re-signed in without re-prompting.
-let googleCredential: { idToken: string; refreshToken: string } | null = null;
-try {
-  const stored = typeof window !== "undefined" ? localStorage.getItem("finsage_google_cred") : null;
-  if (stored) googleCredential = JSON.parse(stored);
-} catch {}
-
-function storeGoogleCredential(cred: { idToken: string; refreshToken: string }) {
-  googleCredential = cred;
+// Clean up any stale legacy credentials from previous iterations
+if (typeof window !== "undefined") {
   try {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("finsage_google_cred", JSON.stringify(cred));
-    }
+    localStorage.removeItem("finsage_google_cred");
   } catch {}
 }
 
@@ -41,7 +27,7 @@ export function isGoogleLoginConfigured(): boolean {
   return !!(process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
 }
 
-/** True when running inside the Capacitor Android app (single-window WebView). */
+/** True when running inside Capacitor Android app */
 export function isNativeApp(): boolean {
   try {
     const w = window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } };
@@ -60,30 +46,30 @@ function buildProvider(): GoogleAuthProvider {
   return provider;
 }
 
-/** Maps Firebase/network errors to messages the user can act on. */
+/** Maps Firebase/network errors to friendly messages */
 export function friendlyGoogleError(err: any): string {
   const code: string | undefined = err?.code;
   switch (code) {
+    case "auth/popup-blocked":
+      return "Pop-up blocked: In Safari, click Safari menu > Settings for localhost... > Pop-up Windows: Allow (or enable pop-ups in your browser settings).";
     case "auth/network-request-failed":
-      return "Can't reach Google. Check your internet connection and try again.";
+      return "Unable to connect to Google. Check your internet connection.";
     case "auth/unauthorized-domain":
-      return "This app address isn't authorized for Google sign-in yet. Please use email sign-in for now.";
+      return "This domain is not authorized in Firebase Auth. Add localhost to Authorized Domains in Firebase Console.";
     case "auth/popup-closed-by-user":
     case "auth/user-cancelled":
-      return "Google sign-in was closed before finishing. Try again.";
+      return "Google sign-in was closed before finishing.";
     case "auth/cancelled-popup-request":
-      return "Another sign-in window is already open. Please finish it or try again.";
-    case "auth/operation-not-supported-in-this-environment":
-      return "Google pop-up sign-in isn't supported here — redirecting to Google instead…";
+      return "Another Google sign-in window is already open.";
     case "auth/web-storage-unsupported":
-      return "Your browser blocks the storage Google sign-in needs. Allow cookies/site data and try again.";
+      return "Your browser is blocking cookies/storage needed for Google sign-in. Please test in a standard (non-incognito) window or allow cookies.";
     case "auth/account-exists-with-different-credential":
-      return "An account with this email already exists. Sign in with your password instead.";
+      return "An account with this email already exists. Please sign in with your email and password.";
     default:
       break;
   }
   if (err instanceof Error && err.message && err.message !== "Failed to fetch") return err.message;
-  if (code) return `Google sign-in failed (${code}). Please try again.`;
+  if (code) return `Google sign-in failed (${code}).`;
   return "Google sign-in failed. Please try again.";
 }
 
@@ -107,133 +93,62 @@ function getClientAuth(): Auth | null {
   }
 }
 
-/** Opens the Google popup showing previously used accounts when available. */
-export async function signInWithGoogle(): Promise<string> {
+// Pre-initialize Firebase Auth on browser load so it is already warm and ready on user click
+if (typeof window !== "undefined") {
+  try {
+    getClientAuth();
+  } catch {}
+}
+
+/**
+ * Directly opens the Google popup showing account chooser.
+ * Synchronously triggers signInWithPopup on user gesture to avoid popup blockers.
+ */
+export function signInWithGoogle(): Promise<string> {
   const a = getClientAuth();
   if (!a) {
-    throw new Error(
-      "Google login is not configured. Add NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN to .env (see .env.example)."
+    return Promise.reject(
+      new Error(
+        "Google login is not configured. Add NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN to .env."
+      )
     );
   }
-  // Inside the Android app popups can't open (single-window WebView),
-  // so go straight to full-page redirect instead of a doomed popup.
-  if (isNativeApp()) {
-    await signInWithGoogleRedirect();
-  }
   const provider = buildProvider();
-
-  // If we have a stored credential, try silent sign-in first.
-  // Fall back to popup if silent sign-in fails (e.g. expired token).
-  if (googleCredential) {
-    try {
-      const cred = GoogleAuthProvider.credential(googleCredential.idToken);
-      const result = await signInWithCredential(a, cred);
-      // Force refresh: never exchange a cached/stale token with our server.
-      const token = await result.user.getIdToken(true);
-      storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
-      return token;
-    } catch {
-      // stale credential — fall through to popup
-    }
-  }
-
-  const cred = await signInWithPopup(a, provider);
-  // Force refresh: guarantees the token sent to /api/auth/google is fresh.
-  const token = await cred.user.getIdToken(true);
-  storeGoogleCredential({ idToken: token, refreshToken: cred.user.refreshToken });
-  return token;
-}
-
-/** Drops all Firebase-persisted auth state (redirect users, cached users).
- *  Our sessions live in our own JWT + localStorage, so this is safe and
- *  clears poisoned state left behind by failed redirect attempts. */
-export async function resetGoogleAuthState(): Promise<void> {
-  const a = getClientAuth();
-  if (!a) return;
-  try {
-    await firebaseSignOut(a);
-  } catch {
-    // best-effort cleanup
-  }
-  try {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("finsage_google_cred");
-    }
-  } catch {}
-  googleCredential = null;
-}
-
-/** Returns true if the user is already signed in (session persisted). */
-export function onGoogleAuthStateChanged(cb: (user: User | null) => void): () => void {
-  const a = getClientAuth();
-  if (!a) return () => {};
-  return onAuthStateChanged(a, cb);
-}
-
-/** Auto-sign-in a returning Google user if a valid session exists. Returns the ID token or null. */
-export async function autoSignInWithGoogle(): Promise<string | null> {
-  const a = getClientAuth();
-  if (!a || !googleCredential) return null;
-  try {
-    const cred = GoogleAuthProvider.credential(googleCredential.idToken);
-    const result = await signInWithCredential(a, cred);
-    const token = await result.user.getIdToken(true);
-    storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
-    return token;
-  } catch {
-    return null;
-  }
+  // Synchronous execution in the user's click gesture stack
+  return signInWithPopup(a, provider).then((cred) => cred.user.getIdToken(true));
 }
 
 export function isPopupBlockedError(err: any): boolean {
-  // WebViews / in-app browsers throw operation-not-supported instead of
-  // popup-blocked; both mean "fall back to full-page redirect".
   return (
     err?.code === "auth/popup-blocked" ||
     err?.code === "auth/operation-not-supported-in-this-environment"
   );
 }
 
-/** Fallback when the browser blocks popups: full-page redirect to Google. */
-export async function signInWithGoogleRedirect(): Promise<never> {
-  const a = getClientAuth();
-  if (!a) {
-    throw new Error(
-      "Google login is not configured. Add NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN to .env (see .env.example)."
-    );
-  }
-  await signInWithRedirect(a, buildProvider());
-  // Control-flow throw (the page unloads into the redirect): callers must
-  // NOT show this as an error toast. See isRedirectingError().
-  const redirecting: any = new Error("Redirecting to Google…");
-  redirecting.code = "app/redirecting";
-  throw redirecting;
-}
-
-/** True for the deliberate post-redirect-navigation throw (not a real error). */
 export function isRedirectingError(err: any): boolean {
-  return err?.code === "app/redirecting";
+  return false;
 }
 
-/** Call on page load: completes a redirect sign-in and returns its ID token, or null. */
+export async function signInWithGoogleRedirect(): Promise<never> {
+  throw new Error("Redirect flow is disabled on localhost. Please use the popup sign-in.");
+}
+
 export async function consumeGoogleRedirect(): Promise<string | null> {
+  return null;
+}
+
+export async function autoSignInWithGoogle(): Promise<string | null> {
+  return null;
+}
+
+export function onGoogleAuthStateChanged(cb: (user: User | null) => void): () => void {
+  return () => {};
+}
+
+export async function resetGoogleAuthState(): Promise<void> {
   const a = getClientAuth();
-  if (!a) return null;
-  let result;
+  if (!a) return;
   try {
-    result = await getRedirectResult(a);
-  } catch (err: any) {
-    // A failed redirect leaves a stale persisted redirect user behind,
-    // which replays the same failure on every page load. Reset all
-    // Firebase-persisted state so the next attempt starts clean.
-    // (Our sessions live in our own JWT, so this is safe.)
-    await resetGoogleAuthState();
-    // Surface the real failure instead of silently stranding the user.
-    console.error("[google-login][redirect] failed:", err?.code || err?.message || err);
-    throw new Error(friendlyGoogleError(err));
-  }
-  if (!result?.user) return null;
-  const token = await result.user.getIdToken(true);
-  storeGoogleCredential({ idToken: token, refreshToken: result.user.refreshToken });
-  return token;
+    await firebaseSignOut(a);
+  } catch {}
 }

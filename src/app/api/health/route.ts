@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { getFirestore, isFirebaseConfigured, getAdminDiagnostics } from "@/lib/firebase";
+import { prisma } from "@/lib/prisma";
+import { isLocalDatabase } from "@/lib/db";
 
-// Read-only connectivity probe for the production database.
-// No auth required. Public output contains ONLY booleans and coarse,
-// non-sensitive status enums — never messages, emails, keys, tokens,
-// project internals, or user data. Full detail goes to server logs
-// (Vercel), which likewise never include credentials.
+// Read-only connectivity probe for the database.
 type Reason =
   | "ok"
   | "unconfigured"
@@ -30,47 +28,47 @@ function categorizeFirestoreError(err: any): Exclude<Reason, "ok" | "unconfigure
 }
 
 export async function GET() {
-  const diag = getAdminDiagnostics();
-  // Safe to log: project IDs are public identifiers; keyShape is
-  // booleans/length only. No emails, keys, tokens, or user data.
-  console.error(
-    "[health] admin diagnostics:",
-    JSON.stringify({
-      configured: diag.configured,
-      projectIdEnv: diag.projectIdEnv,
-      emailProject: diag.emailProject,
-      projectMatch: diag.projectMatch,
-      keyShape: diag.keyShape,
-    })
-  );
+  const localMode = isLocalDatabase();
 
+  if (localMode) {
+    try {
+      await prisma.user.count();
+      return NextResponse.json({
+        ok: true,
+        database: "sqlite (prisma)",
+        mode: "local",
+        firebase: false,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      return NextResponse.json(
+        {
+          ok: false,
+          database: "sqlite (prisma)",
+          mode: "local",
+          error: err?.message || String(err),
+          timestamp: new Date().toISOString(),
+        },
+        { status: 503 }
+      );
+    }
+  }
+
+  const diag = getAdminDiagnostics();
   let firestore: "ok" | "error" | "unconfigured" = diag.configured ? "error" : "unconfigured";
   let reason: Reason = diag.configured ? "unknown" : "unconfigured";
 
   if (diag.configured) {
     const fs = getFirestore();
     if (!fs) {
-      // Credential present but unusable (malformed key, bad quotes, init throw).
       reason = "init-failed";
-      console.error("[health] firestore init failed: projectMatch =", diag.projectMatch);
     } else {
       try {
-        // Single-document read: proves connectivity AND IAM permission
-        // (a revoked/deleted key surfaces here as permission-denied).
         await fs.collection("users").limit(1).get();
         firestore = "ok";
         reason = "ok";
       } catch (err: any) {
         reason = categorizeFirestoreError(err);
-        // Server log only: numeric/string code + truncated message.
-        // Firestore messages carry resource paths at most — no credentials.
-        console.error(
-          "[health] firestore probe:",
-          `reason=${reason}`,
-          `code=${err?.code ?? "n/a"}`,
-          `message=${String(err?.message || err).slice(0, 200)}`,
-          `projectMatch=${diag.projectMatch}`
-        );
       }
     }
   }
@@ -79,6 +77,8 @@ export async function GET() {
   return NextResponse.json(
     {
       ok,
+      database: "firestore",
+      mode: "cloud",
       firebase: diag.configured,
       firestore,
       reason,

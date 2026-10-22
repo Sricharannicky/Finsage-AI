@@ -25,6 +25,8 @@ import { NetWorthSparkline } from "@/components/dashboard/networth-sparkline";
 import { TipsTicker } from "@/components/dashboard/tips-ticker";
 import { HealthRadarWidget } from "@/components/dashboard/health-radar-widget";
 import { SavingsRateWidget } from "@/components/dashboard/savings-rate-widget";
+import { TransactionDialog } from "@/components/shared/transaction-dialog";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import type { ViewType } from "@/components/layout/app-shell";
 
 interface DashboardData {
@@ -61,36 +63,42 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [coachTips, setCoachTips] = useState<{ id: string; type: "success" | "warning" | "info" | "danger"; icon: string; title: string; description: string; action?: string }[]>([]);
   const [coachLoading, setCoachLoading] = useState(true);
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [incomeDialogOpen, setIncomeDialogOpen] = useState(false);
 
   useEffect(() => {
     loadDashboard();
+    const handleDataChanged = () => {
+      loadDashboard(true);
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
   }, []);
 
-  async function loadDashboard() {
-    setLoading(true);
+  async function loadDashboard(silent = false) {
+    if (!silent && !data) setLoading(true);
     try {
       const res = await api.get<DashboardData | null>("/api/dashboard/summary");
       if (!res) {
-        // 401 — don't call refresh() (causes loop). Just show retry UI.
-        setData(null);
+        if (!data) setData(null);
         return;
       }
       setData(res);
       // Load AI insights lazily AFTER dashboard renders
-      setInsightsLoading(true);
+      if (!silent) setInsightsLoading(true);
       api.get<{ insights: string[] } | null>("/api/ai/cached-insights")
         .then((r) => setInsights(r?.insights || []))
         .catch(() => setInsights([]))
         .finally(() => setInsightsLoading(false));
       // Load AI coach tips
-      setCoachLoading(true);
+      if (!silent) setCoachLoading(true);
       api.get<{ tips: any[] } | null>("/api/ai/coach")
         .then((r) => setCoachTips(r?.tips || []))
         .catch(() => setCoachTips([]))
         .finally(() => setCoachLoading(false));
     } catch (err: any) {
       console.error("Dashboard load error:", err);
-      setData(null);
+      if (!data) setData(null);
     } finally {
       setLoading(false);
     }
@@ -128,8 +136,11 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
           <p className="text-sm text-muted-foreground mt-0.5">Your financial overview at a glance</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => onViewChange("expenses")} className="gap-1.5 h-9">
+          <Button variant="outline" size="sm" onClick={() => setExpenseDialogOpen(true)} className="gap-1.5 h-9">
             <Plus className="size-3.5" /> Add Expense
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setIncomeDialogOpen(true)} className="gap-1.5 h-9">
+            <Plus className="size-3.5" /> Add Income
           </Button>
           <Button variant="outline" size="sm" asChild className="gap-1.5 h-9">
             <a href="/api/reports/pdf" download>
@@ -593,6 +604,19 @@ export function DashboardView({ onViewChange }: { onViewChange: (v: ViewType) =>
           )}
         </CardContent>
       </Card>
+
+      <TransactionDialog
+        type="expense"
+        open={expenseDialogOpen}
+        onOpenChange={setExpenseDialogOpen}
+        onSaved={() => loadDashboard(true)}
+      />
+      <TransactionDialog
+        type="income"
+        open={incomeDialogOpen}
+        onOpenChange={setIncomeDialogOpen}
+        onSaved={() => loadDashboard(true)}
+      />
     </div>
   );
 }

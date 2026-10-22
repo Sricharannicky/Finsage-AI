@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { PageHeader, LoadingState, EmptyState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { formatCurrency, formatDate, getCategoryIcon } from "@/lib/constants";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import { toast } from "sonner";
 
 interface RecurringItem {
@@ -30,10 +31,15 @@ export function RecurringView() {
   const [data, setData] = useState<RecurringData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const handleDataChanged = () => load(true);
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+  }, []);
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get<RecurringData>("/api/recurring-list");
       setData(res);

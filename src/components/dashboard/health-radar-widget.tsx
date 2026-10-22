@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/constants";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 
 interface HealthData {
   score: number;
@@ -22,10 +23,15 @@ export function HealthRadarWidget() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<HealthData>("/api/ai/health-score")
-      .then(setHealth)
-      .catch(() => setHealth(null))
-      .finally(() => setLoading(false));
+    function load() {
+      api.get<HealthData>("/api/ai/health-score")
+        .then(setHealth)
+        .catch(() => setHealth(null))
+        .finally(() => setLoading(false));
+    }
+    load();
+    window.addEventListener(DATA_CHANGED_EVENT, load);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, load);
   }, []);
 
   if (loading) {

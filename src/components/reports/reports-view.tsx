@@ -17,6 +17,7 @@ import { PageHeader, LoadingState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { formatCurrency, getCategoryColor, getCategoryIcon } from "@/lib/constants";
 import { getCurrentMonthKey } from "@/lib/finance-utils";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import { toast } from "sonner";
 
 interface ReportData {
@@ -37,8 +38,14 @@ export function ReportsView() {
     loadReport();
   }, [period]);
 
-  async function loadReport() {
-    setLoading(true);
+  useEffect(() => {
+    const handleDataChanged = () => loadReport(true);
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+  }, [period, month]);
+
+  async function loadReport(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await api.get<ReportData>(`/api/reports?period=${period}&month=${month}`);
       setData(res);

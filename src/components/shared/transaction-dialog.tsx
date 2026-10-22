@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
+import { notifyDataChanged } from "@/lib/events";
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_METHODS } from "@/lib/constants";
 
 interface TransactionDialogProps {
@@ -81,6 +82,7 @@ export function TransactionDialog({ type, open, onOpenChange, editing, onSaved }
         toast.success(`${type === "income" ? "Income" : "Expense"} added`);
       }
       onSaved?.();
+      notifyDataChanged();
       onOpenChange(false);
     } catch (err: any) {
       toast.error(err.message || "Failed to save");

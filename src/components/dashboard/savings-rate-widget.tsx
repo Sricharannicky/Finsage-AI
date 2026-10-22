@@ -7,6 +7,7 @@ import { Target, Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 
 interface SavingsRateData {
   series: { month: string; savingsRate: number; income: number; expense: number; savings: number; target: number }[];
@@ -24,10 +25,15 @@ export function SavingsRateWidget() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<SavingsRateData>("/api/dashboard/savings-rate")
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+    function load() {
+      api.get<SavingsRateData>("/api/dashboard/savings-rate")
+        .then(setData)
+        .catch(() => setData(null))
+        .finally(() => setLoading(false));
+    }
+    load();
+    window.addEventListener(DATA_CHANGED_EVENT, load);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, load);
   }, []);
 
   if (loading) {

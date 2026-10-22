@@ -2,24 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Brain, Eye, EyeOff, Loader2, Mail, Lock, User, Sparkles, TrendingUp, ShieldCheck } from "lucide-react";
+import { Brain, Eye, EyeOff, Loader2, Mail, Lock, User, Sparkles, TrendingUp, ShieldCheck, ArrowLeft, RefreshCw, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 import { useAuthStore } from "@/lib/auth-store";
 import { api, ApiError } from "@/lib/api-client";
 import {
   isGoogleLoginConfigured,
-  isNativeApp,
-  isRedirectingError,
   signInWithGoogle,
-  signInWithGoogleRedirect,
-  consumeGoogleRedirect,
-  isPopupBlockedError,
   friendlyGoogleError,
-  onGoogleAuthStateChanged,
-  autoSignInWithGoogle,
 } from "@/lib/firebase-client";
+import {
+  getGoogleClientId,
+  signInWithGIS,
+} from "@/lib/google-auth";
 import { toast } from "sonner";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -53,37 +56,22 @@ export function AuthView() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotStep, setForgotStep] = useState<"email" | "otp">("email");
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const setAuth = useAuthStore((s) => s.setAuth);
-  const googleReady = isGoogleLoginConfigured();
-  const [googleUser, setGoogleUser] = useState<string | null>(null);
 
-  // Auto-sign-in returning Google users on mount.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const token = await autoSignInWithGoogle();
-      if (token && !cancelled) {
-        try {
-          const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken: token });
-          if (res?.user && res?.token) {
-            setAuth(res.user, res.token);
-            toast.success("Welcome back!");
-          }
-        } catch {}
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (countdown <= 0) return;
+    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
 
-  // Listen for Google auth state changes (handles redirect flows).
-  useEffect(() => {
-    const unsub = onGoogleAuthStateChanged((user) => {
-      setGoogleUser(user?.uid ?? null);
-    });
-    return unsub;
-  }, []);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,8 +102,8 @@ export function AuthView() {
     }
   };
 
-  const exchangeGoogleToken = async (idToken: string) => {
-    const res = await api.post<{ user: any; token?: string }>("/api/auth/google", { idToken });
+  const exchangeGoogleCredential = async (cred: { idToken?: string; accessToken?: string }) => {
+    const res = await api.post<{ user: any; token?: string }>("/api/auth/google", cred);
     if (res?.user && res?.token) {
       setAuth(res.user, res.token);
       toast.success("Signed in with Google!");
@@ -124,69 +112,127 @@ export function AuthView() {
     }
   };
 
+  const exchangeGoogleToken = async (idToken: string) => {
+    return exchangeGoogleCredential({ idToken });
+  };
+
   const handleGoogle = async () => {
-    setGoogleLoading(true);
+    // 1. If Google GIS Client ID is configured in .env:
+    if (getGoogleClientId()) {
+      setGoogleLoading(true);
+      try {
+        const { accessToken } = await signInWithGIS();
+        await exchangeGoogleCredential({ accessToken });
+      } catch (err: any) {
+        console.error("[google-login][gis] failed:", err);
+        toast.error(err?.message || "Google sign-in failed");
+      } finally {
+        setGoogleLoading(false);
+      }
+      return;
+    }
+
+    // 2. If Firebase Google sign-in is configured:
+    if (isGoogleLoginConfigured()) {
+      // Trigger popup synchronously in click event stack to prevent popup blocker
+      const loginPromise = signInWithGoogle();
+      setGoogleLoading(true);
+      loginPromise
+        .then((idToken) => exchangeGoogleCredential({ idToken }))
+        .catch((err) => {
+          if (err?.code !== "auth/popup-blocked" && err?.code !== "auth/popup-closed-by-user") {
+            console.error("[google-login][popup] failed:", err?.code || err?.message || err);
+          } else {
+            console.warn("[google-login][popup]:", err?.code || err?.message);
+          }
+          toast.error(friendlyGoogleError(err), { duration: 6000 });
+        })
+        .finally(() => {
+          setGoogleLoading(false);
+        });
+      return;
+    }
+
+    // 3. Unconfigured fallback
+    toast.error("Google sign-in is not configured. Please check your .env file.");
+  };
+
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your registered email address");
+      return;
+    }
+    setLoading(true);
     try {
-      if (isNativeApp()) {
-        // Inside the Android app: popups can't open, so redirect directly.
-        toast.info("Opening Google sign-in…");
-        await signInWithGoogleRedirect();
-        return;
+      const res = await api.post<{
+        success: boolean;
+        message?: string;
+        emailSent?: boolean;
+        emailConfigured?: boolean;
+        debugOtp?: string;
+      }>("/api/auth/forgot", { email });
+
+      setForgotStep("otp");
+      setEmailSent(!!res?.emailSent);
+      setDebugOtp(res?.debugOtp || null);
+      setCountdown(60);
+
+      if (res?.emailSent) {
+        toast.success(`Verification code sent to ${email}`);
+      } else if (res?.debugOtp) {
+        toast.info(`Dev Mode: Your OTP is ${res.debugOtp}`, { duration: 10000 });
+      } else {
+        toast.success(res?.message || "Verification code generated");
       }
-      const idToken = await signInWithGoogle();
-      await exchangeGoogleToken(idToken);
     } catch (err: any) {
-      // Browser blocked the popup (common with strict popup blockers and
-      // in WebViews): fall back to full-page redirect, which always works.
-      if (isPopupBlockedError(err)) {
-        toast.info("Opening Google sign-in…");
-        try {
-          await signInWithGoogleRedirect();
-          return;
-        } catch (redirectErr: any) {
-          // "Redirecting…" is control flow, not a failure — stay silent.
-          if (!isRedirectingError(redirectErr)) toast.error(friendlyGoogleError(redirectErr));
-        }
-      } else if (!isRedirectingError(err)) {
-        console.error("[google-login][popup] failed:", err?.code || err?.message || err);
-        toast.error(friendlyGoogleError(err));
-      }
+      toast.error(err?.message || "Failed to send verification code");
     } finally {
-      setGoogleLoading(false);
+      setLoading(false);
     }
   };
 
-  // Complete a redirect-based Google sign-in when returning from Google.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const idToken = await consumeGoogleRedirect();
-        if (idToken && !cancelled) {
-          setGoogleLoading(true);
-          await exchangeGoogleToken(idToken);
-        }
-      } catch (err: any) {
-        if (!cancelled) toast.error(friendlyGoogleError(err));
-      } finally {
-        if (!cancelled) setGoogleLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleForgot = async (e: React.FormEvent) => {
+  const handleResetWithOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (otp.length !== 6) {
+      toast.error("Please enter the complete 6-digit OTP code");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await api.post<{ message?: string }>("/api/auth/forgot", { email });
-      setForgotSent(true);
-      toast.success(res.message || "Reset link sent!");
+      const res = await api.post<{
+        success: boolean;
+        message?: string;
+        user?: any;
+        token?: string;
+      }>("/api/auth/reset", {
+        email,
+        otp,
+        password: newPassword,
+      });
+
+      if (res?.user && res?.token) {
+        setAuth(res.user, res.token);
+        toast.success("Password reset successfully! Welcome back.");
+      } else {
+        toast.success(res?.message || "Password updated! Please sign in.");
+        setMode("login");
+        setForgotStep("email");
+        setOtp("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }
     } catch (err: any) {
-      toast.error(err?.message || "Request failed");
+      toast.error(err?.message || "Password reset failed");
     } finally {
       setLoading(false);
     }
@@ -309,39 +355,32 @@ export function AuthView() {
           <div className="glass rounded-3xl p-8 shadow-2xl shadow-emerald-500/5">
             <div className="mb-8 text-center">
               <h2 className="text-2xl font-bold tracking-tight">
-                {mode === "login" ? "Welcome back" : mode === "register" ? "Create your account" : "Reset password"}
+                {mode === "login"
+                  ? "Welcome back"
+                  : mode === "register"
+                  ? "Create your account"
+                  : forgotStep === "otp"
+                  ? "Enter Verification Code"
+                  : "Reset password"}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {mode === "login"
                   ? "Sign in to continue managing your finances"
                   : mode === "register"
-                    ? "Start your journey to financial freedom"
-                    : "Enter your email and we'll send you a reset link"}
+                  ? "Start your journey to financial freedom"
+                  : forgotStep === "otp"
+                  ? emailSent
+                    ? `We sent a 6-digit verification code to ${email}`
+                    : `Enter the 6-digit OTP code to reset password for ${email}`
+                  : "Enter your registered email to receive a 6-digit verification code"}
               </p>
             </div>
 
             {mode === "forgot" ? (
-              forgotSent ? (
-                <div className="text-center py-4">
-                  <Mail className="size-10 text-emerald-500 mx-auto mb-3" />
-                  <p className="font-medium">Check your inbox</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    If an account exists for {email || "that email"}, a reset link is on its way (valid 1 hour).
-                  </p>
-                  <button
-                    onClick={() => {
-                      setMode("login");
-                      setForgotSent(false);
-                    }}
-                    className="mt-4 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
-                  >
-                    Back to sign in
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleForgot} className="space-y-4">
+              forgotStep === "email" ? (
+                <form onSubmit={handleSendOtp} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="forgot-email">Email</Label>
+                    <Label htmlFor="forgot-email">Registered Email</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                       <Input
@@ -352,23 +391,145 @@ export function AuthView() {
                         placeholder="you@example.com"
                         className="pl-10 h-11"
                         required
+                        autoFocus
                       />
                     </div>
                   </div>
                   <Button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !email}
                     className="w-full h-11 gradient-emerald text-white border-0 hover:opacity-90 shadow-lg shadow-emerald-500/25"
                   >
-                    {loading ? <Loader2 className="size-4 animate-spin" /> : "Send reset link"}
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : "Send 6-Digit OTP"}
                   </Button>
                   <button
                     type="button"
-                    onClick={() => setMode("login")}
-                    className="w-full text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setMode("login");
+                      setForgotStep("email");
+                    }}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5"
                   >
-                    Back to sign in
+                    <ArrowLeft className="size-3.5" /> Back to sign in
                   </button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetWithOtp} className="space-y-4">
+                  {debugOtp && (
+                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-amber-700 dark:text-amber-300">
+                          Demo / Local OTP:{" "}
+                          <span className="font-mono text-sm tracking-widest text-foreground font-bold ml-1">
+                            {debugOtp}
+                          </span>
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {emailSent ? "Also sent to your email" : "Email provider is not configured in .env"}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setOtp(debugOtp)}
+                        className="h-7 text-xs border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shrink-0"
+                      >
+                        Auto-fill
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 text-center">
+                    <Label className="text-xs text-muted-foreground">Enter 6-digit OTP code</Label>
+                    <div className="flex justify-center py-1">
+                      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                        <InputOTPGroup>
+                          <InputOTPSlot index={0} />
+                          <InputOTPSlot index={1} />
+                          <InputOTPSlot index={2} />
+                        </InputOTPGroup>
+                        <InputOTPSeparator />
+                        <InputOTPGroup>
+                          <InputOTPSlot index={3} />
+                          <InputOTPSlot index={4} />
+                          <InputOTPSlot index={5} />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input
+                        id="new-password"
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="pl-10 pr-10 h-11"
+                        required
+                        minLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirm New Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <Input
+                        id="confirm-password"
+                        type={showPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="pl-10 h-11"
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={loading || otp.length !== 6 || newPassword.length < 6}
+                    className="w-full h-11 gradient-emerald text-white border-0 hover:opacity-90 shadow-lg shadow-emerald-500/25"
+                  >
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : "Reset Password & Sign In"}
+                  </Button>
+
+                  <div className="flex items-center justify-between pt-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setForgotStep("email")}
+                      className="text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    >
+                      <ArrowLeft className="size-3" /> Change email
+                    </button>
+
+                    {countdown > 0 ? (
+                      <span className="text-muted-foreground">Resend in {countdown}s</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSendOtp()}
+                        disabled={loading}
+                        className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1"
+                      >
+                        <RefreshCw className="size-3" /> Resend OTP
+                      </button>
+                    )}
+                  </div>
                 </form>
               )
             ) : (
@@ -421,7 +582,11 @@ export function AuthView() {
                       type="button"
                       onClick={() => {
                         setMode("forgot");
-                        setForgotSent(false);
+                        setForgotStep("email");
+                        setOtp("");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                        setDebugOtp(null);
                       }}
                       className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline"
                     >
@@ -476,21 +641,19 @@ export function AuthView() {
               </div>
             </div>
 
-            {googleReady && (
-              <Button
-                onClick={handleGoogle}
-                disabled={loading || googleLoading}
-                variant="outline"
-                className="w-full h-11 mb-3"
-              >
-                {googleLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <GoogleIcon className="size-4" />
-                )}
-                Continue with Google
-              </Button>
-            )}
+            <Button
+              onClick={handleGoogle}
+              disabled={loading || googleLoading}
+              variant="outline"
+              className="w-full h-11 mb-3"
+            >
+              {googleLoading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <GoogleIcon className="size-4" />
+              )}
+              Continue with Google
+            </Button>
 
             <Button
               onClick={handleDemo}

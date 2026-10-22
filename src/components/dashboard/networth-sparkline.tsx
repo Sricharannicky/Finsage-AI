@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
 import { formatCurrency } from "@/lib/constants";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import type { ViewType } from "@/components/layout/app-shell";
 
 interface NetWorthData {
@@ -21,10 +22,15 @@ export function NetWorthSparkline({ onViewChange }: { onViewChange: (v: ViewType
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<NetWorthData>("/api/networth")
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+    function load() {
+      api.get<NetWorthData>("/api/networth")
+        .then(setData)
+        .catch(() => setData(null))
+        .finally(() => setLoading(false));
+    }
+    load();
+    window.addEventListener(DATA_CHANGED_EVENT, load);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, load);
   }, []);
 
   const positive = (data?.changes.monthly || 0) >= 0;

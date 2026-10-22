@@ -10,8 +10,18 @@ import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
+import { Mail } from "lucide-react";
+
 function ResetForm({ token }: { token: string | null }) {
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
@@ -20,8 +30,8 @@ function ResetForm({ token }: { token: string | null }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) {
-      toast.error("This reset link is invalid. Request a new one from the sign-in page.");
+    if (!token && (!email || otp.length !== 6)) {
+      toast.error("Please enter your registered email and the 6-digit OTP code");
       return;
     }
     if (password !== confirm) {
@@ -30,13 +40,17 @@ function ResetForm({ token }: { token: string | null }) {
     }
     setLoading(true);
     try {
-      const res = await api.post<{ success: boolean; message?: string }>("/api/auth/reset", {
-        token,
-        password,
-      });
+      const payload: any = { password };
+      if (token) {
+        payload.token = token;
+      } else {
+        payload.email = email;
+        payload.otp = otp;
+      }
+      const res = await api.post<{ success: boolean; message?: string }>("/api/auth/reset", payload);
       setDone(true);
       toast.success(res.message || "Password updated!");
-      setTimeout(() => router.push("/"), 2500);
+      setTimeout(() => router.push("/"), 2000);
     } catch (err: any) {
       toast.error(err?.message || "Reset failed");
     } finally {
@@ -56,6 +70,45 @@ function ResetForm({ token }: { token: string | null }) {
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      {!token && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="reset-email">Registered Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                id="reset-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="pl-10 h-11"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 text-center">
+            <Label className="text-xs text-muted-foreground">6-Digit Verification Code</Label>
+            <div className="flex justify-center py-1">
+              <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="new-password">New password</Label>
         <div className="relative">
@@ -97,7 +150,7 @@ function ResetForm({ token }: { token: string | null }) {
       </div>
       <Button
         type="submit"
-        disabled={loading}
+        disabled={loading || (!token && otp.length !== 6) || password.length < 6}
         className="w-full h-11 gradient-emerald text-white border-0 hover:opacity-90 shadow-lg shadow-emerald-500/25"
       >
         {loading ? <Loader2 className="size-4 animate-spin" /> : "Set new password"}
@@ -124,9 +177,9 @@ function ResetPageInner() {
             </div>
             <span className="font-bold text-lg">FinSage AI</span>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-center">Choose a new password</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-center">Reset your password</h2>
           <p className="text-sm text-muted-foreground mt-1 mb-6 text-center">
-            {token ? "Enter your new password below." : "This link looks invalid — request a fresh one from sign in."}
+            {token ? "Enter your new password below." : "Enter your email and 6-digit OTP code to reset your password."}
           </p>
           <ResetForm token={token} />
         </div>

@@ -17,6 +17,7 @@ import { PageHeader, LoadingState, EmptyState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { EXPENSE_CATEGORIES, formatCurrency, getCategoryColor, getCategoryIcon } from "@/lib/constants";
 import { toast } from "sonner";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 import type { Budget } from "@/lib/types";
 
 interface BudgetWithSpent extends Budget {
@@ -47,6 +48,11 @@ export function BudgetView() {
 
   useEffect(() => {
     loadBudgets();
+    const handleDataChanged = () => {
+      loadBudgets();
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
   }, []);
 
   async function loadBudgets() {

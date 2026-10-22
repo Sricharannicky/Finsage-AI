@@ -19,6 +19,7 @@ import { PageHeader, LoadingState, EmptyState } from "@/components/shared";
 import { api } from "@/lib/api-client";
 import { EXPENSE_CATEGORIES, formatCurrency, formatDate, getCategoryIcon } from "@/lib/constants";
 import { toast } from "sonner";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 
 interface Bill {
   id: string; name: string; amount: number; category: string; dueDay: number;
@@ -48,7 +49,14 @@ export function BillsView() {
   const [autoPay, setAutoPay] = useState(false);
   const [note, setNote] = useState("");
 
-  useEffect(() => { loadBills(); }, []);
+  useEffect(() => {
+    loadBills();
+    const handleDataChanged = () => {
+      loadBills();
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+  }, []);
 
   async function loadBills() {
     setLoading(true);

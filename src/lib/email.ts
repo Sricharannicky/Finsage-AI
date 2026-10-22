@@ -91,6 +91,24 @@ export function passwordResetEmailHtml(resetUrl: string, name?: string): string 
   </div>`;
 }
 
+export function otpEmailHtml(otp: string, name?: string): string {
+  return `
+  <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:28px 24px;color:#0f172a;background:#ffffff;border-radius:16px;border:1px solid #e2e8f0">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <div style="width:36px;height:36px;border-radius:10px;background:#10b981;color:#ffffff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:18px;text-align:center;line-height:36px">F</div>
+      <span style="font-weight:bold;font-size:18px;color:#0f172a">FinSage AI</span>
+    </div>
+    <h2 style="margin:0 0 8px;font-size:22px;color:#0f172a">Password Reset OTP</h2>
+    <p style="color:#475569;font-size:14px;line-height:1.6">Hi ${name ? escapeHtml(name) : "there"}, use the following One-Time Password (OTP) to reset your password. This code expires in <strong>10 minutes</strong>.</p>
+    <div style="margin:24px 0;padding:18px;background:#f0fdf4;border:2px dashed #10b981;border-radius:12px;text-align:center">
+      <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:36px;font-weight:700;letter-spacing:10px;color:#059669;padding-left:10px">${otp}</span>
+    </div>
+    <p style="color:#64748b;font-size:13px;line-height:1.5">Enter this code on the verification screen to set your new password. If you did not request this, you can safely ignore this email.</p>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 16px" />
+    <p style="color:#94a3b8;font-size:11px;text-align:center">FinSage AI · Personal Budget Planning Agent</p>
+  </div>`;
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }

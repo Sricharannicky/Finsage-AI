@@ -20,6 +20,7 @@ import { getCurrentMonthKey } from "@/lib/finance-utils";
 import { toast } from "sonner";
 import type { Income, IncomeCategory } from "@/lib/types";
 import { CsvImportDialog } from "@/components/shared/csv-import-dialog";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 
 export function IncomeView() {
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -34,6 +35,11 @@ export function IncomeView() {
 
   useEffect(() => {
     loadIncomes();
+    const handleDataChanged = () => {
+      loadIncomes();
+    };
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
   }, [month, categoryFilter, search]);
 
   async function loadIncomes() {

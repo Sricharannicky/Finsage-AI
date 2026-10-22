@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api-client";
 import { formatCurrency, getCategoryIcon } from "@/lib/constants";
 import { LoadingState } from "@/components/shared";
+import { DATA_CHANGED_EVENT } from "@/lib/events";
 
 interface ComparisonData {
   current: { month: string; income: number; expense: number; savings: number; savingsRate: number };
@@ -37,10 +38,15 @@ export function MonthComparisonWidget() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<ComparisonData>("/api/dashboard/comparison")
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
+    function load() {
+      api.get<ComparisonData>("/api/dashboard/comparison")
+        .then(setData)
+        .catch(() => setData(null))
+        .finally(() => setLoading(false));
+    }
+    load();
+    window.addEventListener(DATA_CHANGED_EVENT, load);
+    return () => window.removeEventListener(DATA_CHANGED_EVENT, load);
   }, []);
 
   if (loading) {

@@ -1,8 +1,11 @@
 // AI provider adapter — Groq (primary) + OpenAI-compatible fallback + stub
 // Replaces z-ai-web-dev-sdk. Set:
-//   GROQ_API_KEY=... (required for AI features)
-//   GROQ_MODEL=openai/gpt-oss-120b (optional, defaults to openai/gpt-oss-120b)
-// Legacy: AI_PROVIDER=openai with OPENAI_API_KEY still works.
+//   GROQ_API_KEY=... (get a free key at https://console.groq.com)
+//   GROQ_MODEL=llama-3.3-70b-versatile (optional, defaults to llama-3.3-70b-versatile)
+// Or for OpenAI:
+//   OPENAI_API_KEY=...
+//   OPENAI_MODEL=gpt-4o-mini (optional, defaults to gpt-4o-mini)
+//   AI_PROVIDER=openai
 
 import Groq from "groq-sdk";
 
@@ -25,8 +28,7 @@ const STUB = {
 
 function normalizeMessages(messages: any[]): any[] {
   // Groq/OpenAI expect roles: system | user | assistant.
-  // Our codebase historically used role "assistant" for the system prompt —
-  // convert a leading assistant message to system for better results.
+  // Convert a leading assistant message to system for better prompt adherence.
   if (!Array.isArray(messages) || messages.length === 0) return messages;
   const out = [...messages];
   if (out[0]?.role === "assistant") {
@@ -48,33 +50,49 @@ function getGroqModel(): string {
 }
 
 export async function getAIClient(): Promise<any> {
+  const provider = (process.env.AI_PROVIDER || "").toLowerCase();
   const groqKey = process.env.GROQ_API_KEY;
+  const openAiKey = process.env.OPENAI_API_KEY;
 
-  // 1. Groq — primary provider
-  if (groqKey) {
+  // 1. Groq — primary provider (if configured and provider is not forced to openai)
+  if (groqKey && provider !== "openai") {
     const groq = new Groq({ apiKey: groqKey });
     const model = getGroqModel();
     return {
       chat: {
         completions: {
           create: async (opts: any) => {
-            const res = await groq.chat.completions.create({
-              model: opts.model || model,
-              messages: normalizeMessages(opts.messages),
-              temperature: opts.temperature ?? 0.7,
-              max_tokens: opts.max_tokens ?? 2048,
-            } as any);
-            return { choices: (res as any).choices || [] };
+            const requestedModel = opts.model || model;
+            try {
+              const res = await groq.chat.completions.create({
+                model: requestedModel,
+                messages: normalizeMessages(opts.messages),
+                temperature: opts.temperature ?? 0.7,
+                max_tokens: opts.max_tokens ?? 2048,
+              } as any);
+              return { choices: (res as any).choices || [] };
+            } catch (err: any) {
+              if (err?.code === "model_not_found" || err?.message?.includes("does not exist")) {
+                console.warn(`[groq] Model ${requestedModel} not found, falling back to openai/gpt-oss-120b`);
+                const fallbackRes = await groq.chat.completions.create({
+                  model: "openai/gpt-oss-120b",
+                  messages: normalizeMessages(opts.messages),
+                  temperature: opts.temperature ?? 0.7,
+                  max_tokens: opts.max_tokens ?? 2048,
+                } as any);
+                return { choices: (fallbackRes as any).choices || [] };
+              }
+              throw err;
+            }
           },
         },
       },
     };
   }
 
-  // 2. Legacy OpenAI-compatible (if user set AI_PROVIDER=openai)
-  const provider = (process.env.AI_PROVIDER || "").toLowerCase();
-  if (provider === "openai") {
-    const apiKey = process.env.OPENAI_API_KEY;
+  // 2. OpenAI provider (if provider=openai or if OPENAI_API_KEY is set without Groq)
+  if (openAiKey || provider === "openai") {
+    const apiKey = openAiKey;
     const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
     if (!apiKey) return STUB;
     return {
@@ -88,9 +106,10 @@ export async function getAIClient(): Promise<any> {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                model,
+                model: opts.model || model,
                 messages: normalizeMessages(opts.messages),
                 temperature: opts.temperature ?? 0.7,
+                max_tokens: opts.max_tokens ?? 2048,
               }),
             });
             const data = await res.json();
@@ -101,14 +120,12 @@ export async function getAIClient(): Promise<any> {
     };
   }
 
-  // 3. Not configured — return stub with helpful message (callers already have fallbacks)
-  if (!groqKey) {
-    console.warn(
-      "[ai] GROQ_API_KEY is not set. AI features will return placeholder text. Get a free key at https://console.groq.com"
-    );
-  }
+  // 3. Not configured — return stub with helpful message
+  console.warn(
+    "[ai] Neither GROQ_API_KEY nor OPENAI_API_KEY is set. AI features will return placeholder text. Get a free key at https://console.groq.com"
+  );
   return STUB;
 }
 
 export const providers = ["groq", "openai", "stub"];
-export const defaultModel = "openai/gpt-oss-120b";
+export const defaultModel = "llama-3.3-70b-versatile";
